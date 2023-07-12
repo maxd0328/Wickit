@@ -41,7 +41,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 
 # Clean up by deleteing build (and artifact) directory
 clean:
-	rm -f $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)
 
 # ---------------------------------------------------------------------------
 # Max Derbenwick 2023

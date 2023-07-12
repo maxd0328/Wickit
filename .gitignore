@@ -1,3 +1,6 @@
 
 # Ignore build output
 build/
+
+# Ignore environment configs
+.vscode/
