@@ -163,7 +163,7 @@ The constant table is referenced throughout the OPP file using 16-bit indices. N
 
 | First Byte | Last Byte | Field Name | Description |
 | ---------- | --------- | ---------- | ----------- |
-| 00 | 00 | `ENTRY_SIG` | Type expression signature = `01` |
+| 00 | 00 | `ENTRY_SIG` | Type expression signature = `01`, or `02` for optional type |
 | 01 | 04 | `LEN_DISJTBL` | Length in bytes of the disjunction sub-table |
 | 05 | `04 + LEN_DISJTBL` | `DISJTBL` | The disjunction sub-table (details below) |
 
@@ -227,7 +227,7 @@ The conjunction sub-table has a unique set of entry signatures for different uni
 
 | First Byte | Last Byte | Field Name | Description |
 | ---------- | --------- | ---------- | ----------- |
-| 00 | 00 | `ENTRY_SIG` | Function literal signature = `02` |
+| 00 | 00 | `ENTRY_SIG` | Function literal signature = `03` |
 | 01 | 04 | `INSTR_OFF` | Offset in bytes at which the function begins in the bytecode pool |
 | 05 | 06 | `INSTR_LEN` | Length in bytes of the function in the bytecode pool |
 
@@ -244,18 +244,18 @@ The following table gives the entry signatures for each type of numeric literal,
 
 | Entry Type | Entry Signature | Literal Size | Description |
 | ---------- | --------------- | ------------ | ----------- |
-| `CUINTLIT` | `03` | 4 | Unsigned Integer Literal |
-| `CINTLIT` | `04` | 4 | Signed Integer Literal |
-| `CULNGLIT` | `05` | 8 | Unsigned Long Literal |
-| `CLNGLIT` | `06` | 8 | Signed Long Literal |
-| `CFLTLIT` | `07` | 4 | Float Literal |
-| `CDBLLIT` | `08` | 8 | Double Literal |
+| `CUINTLIT` | `04` | 4 | Unsigned Integer Literal |
+| `CINTLIT` | `05` | 4 | Signed Integer Literal |
+| `CULNGLIT` | `06` | 8 | Unsigned Long Literal |
+| `CLNGLIT` | `07` | 8 | Signed Long Literal |
+| `CFLTLIT` | `08` | 4 | Float Literal |
+| `CDBLLIT` | `09` | 8 | Double Literal |
 
 ### 3.5 String Literal `CSTRLIT`
 
 | First Byte | Last Byte | Field Name | Description |
 | ---------- | --------- | ---------- | ----------- |
-| 00 | 00 | `ENTRY_SIG` | String literal signature = `09` |
+| 00 | 00 | `ENTRY_SIG` | String literal signature = `0a` |
 | 01 | 02 | `LIT_LEN` | Length of the string literal in bytes (number of characters * 2) |
 | 03 | `02 + LIT_LEN` | Value of the string literal as a UTF-16 string |
 
