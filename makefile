@@ -8,7 +8,7 @@
 
 # Define compiler and arguments
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall
+CXXFLAGS = -std=c++17 -Wall -Isrc
 
 # Define source, build, and artifact directories
 SRC_DIR = ./src
