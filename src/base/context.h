@@ -1,19 +1,17 @@
 #pragma once
 
 #include "include/definitions.h"
-#include "arguments.h"
 
 namespace wckt::base
 {
     class EngineContext
     {
         private:
-            EngineArguments arguments;
-        
-        public:
-            EngineContext(const EngineArguments& arguments);
-            ~EngineContext() = default;
-
-            const EngineArguments& getArguments() const;
+			uint32_t contextID;
+			std::filesystem::path workingDirectory;
+			
+		public:
+			uint32_t getContextID() const;
+			std::filesystem::path getWorkingDirectory() const;
     };
 }

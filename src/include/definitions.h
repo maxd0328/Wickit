@@ -14,6 +14,7 @@
 #include <cctype>
 #include <algorithm>
 #include <locale>
+#include <filesystem>
 
 // Define 8-bit characters
 typedef uint8_t     uchar_t;
@@ -32,24 +33,3 @@ typedef uint32_t    enum_t;
 
 #define WCKT_MAJ_VER 1
 #define WCKT_MIN_VER 0
-
-// String util functions
-void ltrim(std::string& s)
-{
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
-        return !std::isspace(ch);
-    }));
-}
-
-void rtrim(std::string& s)
-{
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
-        return !std::isspace(ch);
-    }).base(), s.end());
-}
-
-void trim(std::string& s)
-{
-    ltrim(s);
-    rtrim(s);
-}

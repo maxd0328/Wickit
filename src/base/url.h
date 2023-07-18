@@ -8,41 +8,35 @@ namespace wckt::base
     {
         public:
             virtual ~URLProtocol() = default;
-            virtual std::unique_ptr<std::istream> stream(const std::string& source) const = 0;
+            virtual std::unique_ptr<std::istream> istream(const std::string& source, const URL* parent) const = 0;
+			virtual std::unique_ptr<std::ostream> ostream(const std::string& source, const URL* parent) const = 0;
     };
-
-    class StringProtocol : URLProtocol
-    {
-        public:
-            ~StringProtocol() override = default;
-            std::unique_ptr<std::istream> stream(const std::string& source) const override;
-    };
-
-    class FileProtocol : URLProtocol
-    {
-        public:
-            ~FileProtocol() override = default;
-            std::unique_ptr<std::istream> stream(const std::string& source) const override;
-    };
-
+	
     class URL
     {
         public:
-            static std::map<std::string, std::shared_ptr<URLProtocol>> knownProtocols;
-
+			static const std::shared_ptr<URLProtocol> STRING_PROTOCOL;
+			static const std::shared_ptr<URLProtocol> FILE_PROTOCOL;
+			
+			static std::map<std::string, std::shared_ptr<URLProtocol>> knownProtocols;
+			
         private:
             std::shared_ptr<URLProtocol> protocol;
             std::string source;
+			const URL* parent;
         
         public:
-            URL(std::shared_ptr<URLProtocol> protocol, const std::string& source);
-            URL(const std::string& value);
+            URL(std::shared_ptr<URLProtocol> protocol, const std::string& source, const URL* parent = nullptr);
+            URL(const std::string& value, const URL* parent = nullptr);
             ~URL() = default;
 
             std::shared_ptr<URLProtocol> getProtocol() const;
             std::string getSource() const;
+			const URL* getParent() const;
 
-            std::unique_ptr<std::istream> toStream() const;
+            std::unique_ptr<std::istream> toInputStream() const;
             std::string read() const;
+			
+			std::unique_ptr<std::ostream> toOutputStream() const;
     };
 }

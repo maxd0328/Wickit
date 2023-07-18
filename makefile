@@ -22,7 +22,7 @@ SRCS = $(wildcard $(SRC_DIR)/*.cpp $(SRC_DIR)/**/*.cpp)
 OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
 
 # Locate target executable
-TARGET = $(BUILD_DIR)/wickit.exe
+TARGET = $(BUILD_DIR)/wickit
 
 # All = build target
 all: $(TARGET)

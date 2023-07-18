@@ -20,22 +20,23 @@ The following gives the structure of a modulefile:
 <module>
     <dependencies>
         <dependency src="wickitstd">
-        <dependency src="file:///path/to/exampleModule/">
+        <dependency src="file://path/to/exampleModule/">
     </dependencies>
     <packages>
         <package name="org">
             <package name="example">
-                <asset src="file:///path/to/example.wckt">
+                <asset src="file://path/to/example.wckt">
             </package>
         </package>
     </packages>
     <build when="changed">
-        <mount pckg="org.example" dst="file:///buildFolder/">
+        <mount pckg="org.example" dst="file://buildFolder/">
         <pipeline when="before-each">
             <stage cmd="cat {{asset-src}}">
         </pipeline>
     </build>
     <entry symbol="org.example.main">
+	
 </module>
 ```
 
