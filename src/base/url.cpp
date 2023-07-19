@@ -1,5 +1,6 @@
 #include "base/url.h"
 #include "include/strutil.h"
+#include "include/exception.h"
 
 using namespace wckt::base;
 
@@ -16,7 +17,12 @@ namespace
 
 		std::unique_ptr<std::ostream> ostream(const std::string& source, const URL* parent) const override
 		{
-			throw std::logic_error("Operation not supported on string protocol");
+			throw UnsupportedOperationError("StringProtocol::ostream");
+		}
+
+		bool equals(const std::string& s0, const URL* p0, const std::string& s1, const URL* p1) const override
+		{
+			return s0 == s1;
 		}
 	};
 
@@ -51,6 +57,13 @@ namespace
 			if(!stream->is_open())
 				throw std::runtime_error("Failed to open file: " + sourcepath.string());
 			return stream;
+		}
+
+		bool equals(const std::string& s0, const URL* p0, const std::string& s1, const URL* p1) const override
+		{
+			auto path0 = computePath(s0, p0), path1 = computePath(s1, p1);
+			auto norm0 = std::filesystem::canonical(path0), norm1 = std::filesystem::canonical(path1);
+			return norm0 == norm1;
 		}
 	};	
 }
@@ -138,4 +151,16 @@ std::string URL::read() const
 std::unique_ptr<std::ostream> URL::toOutputStream() const
 {
 	return this->protocol->ostream(this->source, this->parent);
+}
+
+bool URL::operator==(const URL& other) const
+{
+	if(this->protocol != other.protocol)
+		return false;
+	return this->protocol->equals(this->source, this->parent, other.source, other.parent);
+}
+
+bool URL::operator!=(const URL& other) const
+{
+	return !(*this == other);
 }
