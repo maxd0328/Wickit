@@ -2,13 +2,13 @@
 
 #include "include/definitions.h"
 
-struct AssertionError : std::runtime_error
+struct AssertionError : public std::runtime_error
 {
     AssertionError(const std::string& message);
     ~AssertionError() = default;
 };
 
-struct UnsupportedOperationError : std::runtime_error
+struct UnsupportedOperationError : public std::runtime_error
 {
     UnsupportedOperationError(const std::string& message);
     ~UnsupportedOperationError() = default;

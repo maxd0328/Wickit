@@ -33,3 +33,7 @@ typedef uint32_t    enum_t;
 
 #define WCKT_MAJ_VER 1
 #define WCKT_MIN_VER 0
+
+// Macros
+#define _VECARG(__Type, __Name)			const std::vector<__Type>& __Name = std::vector<__Type>()
+#define _MAPARG(__Key, __Val, __Name)	const std::map<__Key, __Val>& __Name = std::map<__Key, __Val>()

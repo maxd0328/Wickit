@@ -4,6 +4,8 @@
 
 namespace wckt::base
 {
+	class URL;
+	
     class URLProtocol
     {
         public:

@@ -36,7 +36,6 @@ The following gives the structure of a modulefile:
         </pipeline>
     </build>
     <entry symbol="org.example.main">
-	
 </module>
 ```
 
@@ -124,7 +123,15 @@ Attributes:
 Children:
  * None
 
-### 3.4 Package Tag `<package ...>`
+### 3.4 Packages Tag `<packages>`
+
+Attributes:
+ * None
+
+Children:
+ * `<package>`
+
+### 3.5 Package Tag `<package ...>`
 
 Attributes:
  * `name`: The name of the package. This package is then accessed as a child of its parent package (or root package if it has no parent). In the example from section 1, the `example` package would be accessed as `org.example`.
@@ -134,7 +141,7 @@ Children:
  * `<package>`
  * `<asset>`
 
-### 3.5 Asset Tag `<asset ...>`
+### 3.6 Asset Tag `<asset ...>`
 
 Attributes:
  * `src`: The URL of the source file associated with this asset.
@@ -142,7 +149,7 @@ Attributes:
 Children:
  * None
 
-3.6 Build Tag `<build ...>`
+### 3.7 Build Tag `<build ...>`
 
 Attributes:
  * `when`: Specifies when assets should be rebuilt. Acceptable values are `"always"`, `"changed"`, and `"never"`. This attribute is optional with a default value of `"changed"`.
@@ -152,7 +159,7 @@ Children:
  * `<mount>`
  * `<pipeline>`
 
-3.7 Mount Tag `<mount ...>`
+### 3.8 Mount Tag `<mount ...>`
 
 Attributes:
  * `pckg`: Specifies the package to be mounted
@@ -161,7 +168,7 @@ Attributes:
 Children:
  * None
 
-3.8 Pipeline Tag `<pipeline ...>`
+### 3.9 Pipeline Tag `<pipeline ...>`
 
 Attributes:
  * `when`: Specifies when the pipeline should be run. Acceptable values are `"before-each"`, `"before-all"`, `"after-each"`, and `"after-all"`.
@@ -170,7 +177,7 @@ Attributes:
 Children:
  * `<stage>`
 
-3.9 Stage Tag `<stage ...>`
+### 3.10 Stage Tag `<stage ...>`
 
 Attributes:
  * `cmd`: The command to be run for this stage. The commands are expressed in terms of the native command line, but special compiler variables may be used in between double curly braces like so: `{{variable}}`. Some variables which can be used are the following:
@@ -182,7 +189,7 @@ Attributes:
 Children:
  * None
 
-3.10 Entry Tag `<entry ...>`
+### 3.11 Entry Tag `<entry ...>`
 
 Attributes:
  * `symbol`: The function, referenced from the root package, at which to start execution of this module.

@@ -6,7 +6,7 @@ using namespace wckt::base;
 
 namespace
 {
-	struct StringProtocol : URLProtocol
+	struct StringProtocol : public URLProtocol
 	{
 		~StringProtocol() override = default;
 		
@@ -26,7 +26,7 @@ namespace
 		}
 	};
 
-	struct FileProtocol : URLProtocol
+	struct FileProtocol : public URLProtocol
 	{
 		~FileProtocol() override = default;
 		

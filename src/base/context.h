@@ -2,6 +2,7 @@
 
 #include "include/definitions.h"
 #include "base/module.h"
+#include "symbol/symbol.h"
 
 namespace wckt::base
 {
@@ -11,6 +12,7 @@ namespace wckt::base
 			uint32_t contextID;
 			std::vector<URL> unloadedModules;
 			std::vector<Module> loadedModules;
+			std::unique_ptr<sym::Namespace> declarationSpace;
 
 		public:
 			uint32_t getContextID() const;
@@ -24,5 +26,8 @@ namespace wckt::base
 
 			const Module& getModule(const URL& url) const;
 			void unloadModule(const URL& url);
+			
+			const sym::Namespace* getDeclarationSpace() const;
+			sym::Namespace* getDeclarationSpace();
     };
 }
