@@ -40,4 +40,26 @@ namespace wckt::sym
 			void declareSymbol(std::unique_ptr<Symbol> symbol);
 			void undeclareSymbol(uint32_t index);
 	};
+
+	class SymbolResolutionError : public std::runtime_error
+	{
+		public:
+			enum ErrorType
+			{
+				NOT_FOUND,
+				NOT_NAMESPACE,
+				DUP_DECL
+			};
+		
+		private:
+			ErrorType type;
+			Locator locator;
+			
+		public:
+			SymbolResolutionError(ErrorType type, const Locator& locator);
+			~SymbolResolutionError() = default;
+			
+			ErrorType getType() const;
+			Locator getLocator() const;
+	};
 }

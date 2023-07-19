@@ -41,27 +41,5 @@ namespace wckt::sym
 			bool operator>=(const Locator& other) const;
 	};
 	
-	Locator operator+(const Locator& locator, const std::string& pckg);
 	Locator operator+(const Locator& locator0, const Locator& locator1);
-	
-	class SymbolResolutionError : public std::runtime_error
-	{
-		public:
-			enum ErrorType
-			{
-				NOT_FOUND,
-				NOT_NAMESPACE
-			};
-		
-		private:
-			ErrorType type;
-			Locator locator;
-			
-		public:
-			SymbolResolutionError(ErrorType type, const Locator& locator);
-			~SymbolResolutionError() = default;
-			
-			ErrorType getType() const;
-			Locator getLocator() const;
-	};
 }

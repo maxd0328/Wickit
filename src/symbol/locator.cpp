@@ -57,15 +57,13 @@ uint32_t Locator::length() const
     return this->pckgs.size();
 }
 
-template<typename _Ty>
-static auto locateImpl(const std::vector<std::string>& pckgs, _Ty& context) -> decltype(context.getDeclarationSpace())
+template<typename __Tc, typename __Ts, typename __Tn>
+static __Ts* locateImpl(const std::vector<std::string>& pckgs, __Tc& context)
 {
-	using _Tx = std::remove_reference_t<decltype(*context.getDeclarationSpace())>;
-	
-	_Tx* symbol = static_cast<_Tx*>(context.getDeclarationSpace());
+	__Ts* symbol = context.getDeclarationSpace();
 	for(const auto& pckg : pckgs)
 	{
-		if(auto n = dynamic_cast<std::decay_t<decltype(symbol)>>(symbol))
+		if(__Tn* n = dynamic_cast<__Tn*>(symbol))
 		{
 			uint32_t index = n->find(pckg);
 			if(index == Namespace::npos)
@@ -79,25 +77,12 @@ static auto locateImpl(const std::vector<std::string>& pckgs, _Ty& context) -> d
 
 const Symbol* Locator::locate(const base::EngineContext& context) const
 {
-	return locateImpl(this->pckgs, context);
+	return locateImpl<const base::EngineContext, const Symbol, const Namespace>(this->pckgs, context);
 }
 
-/* Duplicate implementation for non-const because C++ kinda sucks */
 Symbol* Locator::locate(base::EngineContext& context)
 {
-	Symbol* symbol = context.getDeclarationSpace();
-	for(const auto& pckg : this->pckgs)
-	{
-		if(Namespace* n = dynamic_cast<Namespace*>(symbol))
-		{
-			uint32_t index = n->find(pckg);
-			if(index == Namespace::npos)
-				throw SymbolResolutionError(SymbolResolutionError::NOT_FOUND, symbol->getLocator() + pckg);
-			symbol = n->getSymbol(index);
-		}
-		else throw SymbolResolutionError(SymbolResolutionError::NOT_NAMESPACE, symbol->getLocator());
-	}
-	return symbol;
+	return locateImpl<base::EngineContext, Symbol, Namespace>(this->pckgs, context);
 }
 
 std::string Locator::toString() const
@@ -140,34 +125,10 @@ bool Locator::operator>=(const Locator& other) const { return !(*this < other); 
 bool Locator::operator<=(const Locator& other) const { return *this == other || *this < other; }
 bool Locator::operator>(const Locator& other) const { return !(*this == other) && !(*this < other); }
 
-Locator operator+(const Locator& locator, const std::string& pckg)
-{
-	std::vector<std::string> pckgs = locator.getPackages();
-	pckgs.push_back(pckg);
-	return Locator(pckgs);
-}
-
-Locator operator+(const Locator& locator0, const Locator& locator1)
+Locator wckt::sym::operator+(const Locator& locator0, const Locator& locator1)
 {
 	std::vector<std::string> pckgs = locator0.getPackages();
 	std::vector<std::string> pckgsToAdd = locator1.getPackages();
 	pckgs.insert(pckgs.end(), pckgsToAdd.begin(), pckgsToAdd.end());
 	return Locator(pckgs);
-}
-
-SymbolResolutionError::SymbolResolutionError(ErrorType type, const Locator& locator)
-: std::runtime_error(locator.toString())
-{
-	this->type = type;
-	this->locator = locator;
-}
-
-SymbolResolutionError::ErrorType SymbolResolutionError::getType() const
-{
-	return this->type;
-}
-
-Locator SymbolResolutionError::getLocator() const
-{
-	return this->locator;
 }
