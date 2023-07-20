@@ -13,6 +13,7 @@ namespace wckt::base
             virtual std::unique_ptr<std::istream> istream(const std::string& source, const URL* parent) const = 0;
 			virtual std::unique_ptr<std::ostream> ostream(const std::string& source, const URL* parent) const = 0;
             virtual bool equals(const std::string& s0, const URL* p0, const std::string& s1, const URL* p1) const = 0;
+			virtual std::string append(const std::string& source, const std::string& elem) const = 0;
     };
 	
     class URL
@@ -44,5 +45,8 @@ namespace wckt::base
 
             bool operator==(const URL& other) const;
             bool operator!=(const URL& other) const;
+			
+			URL operator+(const std::string& elem) const;
+			URL& operator+=(const std::string& elem);
     };
 }

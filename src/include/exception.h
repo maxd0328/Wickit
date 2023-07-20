@@ -14,4 +14,16 @@ struct UnsupportedOperationError : public std::runtime_error
     ~UnsupportedOperationError() = default;
 };
 
+struct ElementNotFoundError : public std::runtime_error
+{
+	ElementNotFoundError(const std::string& message);
+	~ElementNotFoundError() = default;
+};
+
+struct IOError : public std::runtime_error
+{
+	IOError(const std::string& message);
+	~IOError() = default;
+};
+
 void assert(bool condition, const std::string& message = "Assertion failed");

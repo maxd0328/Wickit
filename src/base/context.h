@@ -1,7 +1,7 @@
 #pragma once
 
 #include "include/definitions.h"
-#include "base/module.h"
+#include "base/modules/module.h"
 #include "symbol/symbol.h"
 
 namespace wckt::base

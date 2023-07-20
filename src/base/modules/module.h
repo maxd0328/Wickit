@@ -67,6 +67,18 @@ namespace wckt::base
 			URL getMountPoint(const sym::Locator& location) const;
 	};
 	
+	class EntryComponent : public ModuleComponent
+	{
+		private:
+			sym::Locator locator;
+			
+		public:
+			EntryComponent(const sym::Locator& locator);
+			~EntryComponent() override = default;
+			
+			sym::Locator getLocator() const;
+	};
+	
     class Module
     {
         private:
@@ -74,9 +86,10 @@ namespace wckt::base
             std::vector<ModuleDependency> dependencies;
 			std::vector<Package> packages;
 			std::map<std::string, std::unique_ptr<ModuleComponent>> components;
-	
+			
         public:
-            Module(const URL& modulefile, _VECARG(ModuleDependency, dependencies), _VECARG(Package, packages), _VECARG(ModuleComponent, components));
+            Module(const URL& modulefile, _VECARG(ModuleDependency, dependencies), _VECARG(Package, packages),
+				_MAPARG(std::string, std::unique_ptr<ModuleComponent>, components));
 			~Module() = default;
 			
 			URL getModulefile() const;

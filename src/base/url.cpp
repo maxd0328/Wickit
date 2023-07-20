@@ -24,6 +24,11 @@ namespace
 		{
 			return s0 == s1;
 		}
+		
+		std::string append(const std::string& source, const std::string& elem) const override
+		{
+			throw UnsupportedOperationError("StringProtocol::append");
+		}
 	};
 
 	struct FileProtocol : public URLProtocol
@@ -46,7 +51,7 @@ namespace
 			auto sourcepath = computePath(source, parent);
 			auto stream = std::make_unique<std::ifstream>(sourcepath);
 			if(!stream->is_open())
-				throw std::runtime_error("Failed to open file: " + sourcepath.string());
+				throw IOError("Failed to open file: " + sourcepath.string());
 			return stream;
 		}
 
@@ -55,7 +60,7 @@ namespace
 			auto sourcepath = computePath(source, parent);
 			auto stream = std::make_unique<std::ofstream>(sourcepath, std::ios_base::binary);
 			if(!stream->is_open())
-				throw std::runtime_error("Failed to open file: " + sourcepath.string());
+				throw IOError("Failed to open file: " + sourcepath.string());
 			return stream;
 		}
 
@@ -64,6 +69,12 @@ namespace
 			auto path0 = computePath(s0, p0), path1 = computePath(s1, p1);
 			auto norm0 = std::filesystem::canonical(path0), norm1 = std::filesystem::canonical(path1);
 			return norm0 == norm1;
+		}
+		
+		std::string append(const std::string& source, const std::string& elem) const override
+		{
+			std::filesystem::path p = source;
+			return (p / elem).string();
 		}
 	};	
 }
@@ -113,7 +124,7 @@ URL::URL(const std::string& value, const URL* parent)
         }
     }
 
-    throw std::runtime_error("No such protocol: " + protocol);
+    throw IOError("No such protocol: " + protocol);
 
     assignment:
     this->source = source;
@@ -163,4 +174,16 @@ bool URL::operator==(const URL& other) const
 bool URL::operator!=(const URL& other) const
 {
 	return !(*this == other);
+}
+
+URL URL::operator+(const std::string& elem) const
+{
+	URL newURL = *this;
+	newURL += elem;
+	return newURL;
+}
+
+URL& URL::operator+=(const std::string& elem)
+{
+	this->source = this->protocol->append(this->source, elem);
 }
