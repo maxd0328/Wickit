@@ -1,13 +1,14 @@
 #pragma once
 
 #include "include/definitions.h"
+#include "base/xmlparser.h"
 #include "base/url.h"
 #include "symbol/locator.h"
 #include "type/access.h"
 
 namespace wckt::base
 {
-    class ModuleDependency
+    class ModuleDependency : public XMLObject
     {
         private:
             URL moduleURL;
@@ -79,7 +80,7 @@ namespace wckt::base
 			sym::Locator getLocator() const;
 	};
 	
-    class Module
+    class Module : public XMLObject
     {
         private:
             URL modulefile;

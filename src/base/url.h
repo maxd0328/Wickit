@@ -10,9 +10,9 @@ namespace wckt::base
     {
         public:
             virtual ~URLProtocol() = default;
-            virtual std::unique_ptr<std::istream> istream(const std::string& source, const URL* parent) const = 0;
-			virtual std::unique_ptr<std::ostream> ostream(const std::string& source, const URL* parent) const = 0;
-            virtual bool equals(const std::string& s0, const URL* p0, const std::string& s1, const URL* p1) const = 0;
+            virtual std::unique_ptr<std::istream> istream(const std::string& source, std::shared_ptr<URL> parent) const = 0;
+			virtual std::unique_ptr<std::ostream> ostream(const std::string& source, std::shared_ptr<URL> parent) const = 0;
+            virtual bool equals(const std::string& s0, std::shared_ptr<URL> p0, const std::string& s1, std::shared_ptr<URL> p1) const = 0;
 			virtual std::string append(const std::string& source, const std::string& elem) const = 0;
     };
 	
@@ -27,16 +27,16 @@ namespace wckt::base
         private:
             std::shared_ptr<URLProtocol> protocol;
             std::string source;
-			const URL* parent;
+			std::shared_ptr<URL> parent;
         
         public:
-            URL(std::shared_ptr<URLProtocol> protocol, const std::string& source, const URL* parent = nullptr);
-            URL(const std::string& value, const URL* parent = nullptr);
+            URL(std::shared_ptr<URLProtocol> protocol, const std::string& source, std::shared_ptr<URL> parent = nullptr);
+            URL(const std::string& value, std::shared_ptr<URL> parent = nullptr);
             ~URL() = default;
 
             std::shared_ptr<URLProtocol> getProtocol() const;
             std::string getSource() const;
-			const URL* getParent() const;
+			std::shared_ptr<URL> getParent() const;
 
             std::unique_ptr<std::istream> toInputStream() const;
             std::string read() const;

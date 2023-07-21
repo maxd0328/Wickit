@@ -10,17 +10,17 @@ namespace
 	{
 		~StringProtocol() override = default;
 		
-		std::unique_ptr<std::istream> istream(const std::string& source, const URL* parent) const override
+		std::unique_ptr<std::istream> istream(const std::string& source, std::shared_ptr<URL> parent) const override
 		{
 			return std::make_unique<std::istringstream>(source);
 		}
 
-		std::unique_ptr<std::ostream> ostream(const std::string& source, const URL* parent) const override
+		std::unique_ptr<std::ostream> ostream(const std::string& source, std::shared_ptr<URL> parent) const override
 		{
 			throw UnsupportedOperationError("StringProtocol::ostream");
 		}
 
-		bool equals(const std::string& s0, const URL* p0, const std::string& s1, const URL* p1) const override
+		bool equals(const std::string& s0, std::shared_ptr<URL> p0, const std::string& s1, std::shared_ptr<URL> p1) const override
 		{
 			return s0 == s1;
 		}
@@ -35,7 +35,7 @@ namespace
 	{
 		~FileProtocol() override = default;
 		
-		static inline std::filesystem::path computePath(const std::string& source, const URL* parent)
+		static inline std::filesystem::path computePath(const std::string& source, std::shared_ptr<URL> parent)
 		{
 			std::filesystem::path sourcepath = source;
 			if(parent != nullptr && parent->getProtocol() == URL::FILE_PROTOCOL)
@@ -46,7 +46,7 @@ namespace
 			return sourcepath;
 		}
 		
-		std::unique_ptr<std::istream> istream(const std::string& source, const URL* parent) const override
+		std::unique_ptr<std::istream> istream(const std::string& source, std::shared_ptr<URL> parent) const override
 		{
 			auto sourcepath = computePath(source, parent);
 			auto stream = std::make_unique<std::ifstream>(sourcepath);
@@ -55,7 +55,7 @@ namespace
 			return stream;
 		}
 
-		std::unique_ptr<std::ostream> ostream(const std::string& source, const URL* parent) const override
+		std::unique_ptr<std::ostream> ostream(const std::string& source, std::shared_ptr<URL> parent) const override
 		{
 			auto sourcepath = computePath(source, parent);
 			auto stream = std::make_unique<std::ofstream>(sourcepath, std::ios_base::binary);
@@ -64,7 +64,7 @@ namespace
 			return stream;
 		}
 
-		bool equals(const std::string& s0, const URL* p0, const std::string& s1, const URL* p1) const override
+		bool equals(const std::string& s0, std::shared_ptr<URL> p0, const std::string& s1, std::shared_ptr<URL> p1) const override
 		{
 			auto path0 = computePath(s0, p0), path1 = computePath(s1, p1);
 			auto norm0 = std::filesystem::canonical(path0), norm1 = std::filesystem::canonical(path1);
@@ -87,14 +87,14 @@ std::map<std::string, std::shared_ptr<URLProtocol>> URL::knownProtocols = {
 	{"file", URL::FILE_PROTOCOL}
 };
 
-URL::URL(std::shared_ptr<URLProtocol> protocol, const std::string& source, const URL* parent)
+URL::URL(std::shared_ptr<URLProtocol> protocol, const std::string& source, std::shared_ptr<URL> parent)
 {
     this->protocol = protocol;
     this->source = source;
 	this->parent = parent;
 }
 
-URL::URL(const std::string& value, const URL* parent)
+URL::URL(const std::string& value, std::shared_ptr<URL> parent)
 {
     std::string protocol;
     std::string source;
@@ -142,7 +142,7 @@ std::string URL::getSource() const
     return this->source;
 }
 
-const URL* URL::getParent() const
+std::shared_ptr<URL> URL::getParent() const
 {
 	return this->parent;
 }

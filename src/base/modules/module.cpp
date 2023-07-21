@@ -5,7 +5,7 @@ using namespace wckt;
 using namespace wckt::base;
 
 ModuleDependency::ModuleDependency(const URL& moduleURL, const sym::Locator& target, const sym::Locator& container, bool bundle)
-: moduleURL(moduleURL)
+: XMLObject(), moduleURL(moduleURL)
 {
 	this->target = target;
 	this->container = container;
@@ -89,7 +89,7 @@ sym::Locator EntryComponent::getLocator() const
 
 Module::Module(const URL& modulefile, const std::vector<ModuleDependency>& dependencies, const std::vector<Package>& packages,
 	const std::map<std::string, std::unique_ptr<ModuleComponent>>& components)
-: modulefile(modulefile)
+: XMLObject(), modulefile(modulefile)
 {
 	this->dependencies = dependencies;
 	this->packages = packages;
