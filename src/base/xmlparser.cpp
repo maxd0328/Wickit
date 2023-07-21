@@ -3,6 +3,11 @@
 
 using namespace wckt::base;
 
+template<typename _Ty>
+XMLWrapper<_Ty>::XMLWrapper(const _Ty& val)
+: val(val)
+{}
+
 TagRule::TagRule(const std::string& name, const std::vector<argument_t>& arguments, const std::vector<std::shared_ptr<TagRule>>& children)
 {
 	this->name = name;

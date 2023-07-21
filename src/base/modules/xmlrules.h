@@ -18,6 +18,9 @@ namespace wckt::base
 	{
 		MODXML_MAKERULE(DependencyTag)
 		MODXML_MAKERULE(DependenciesTag)
+		MODXML_MAKERULE(AssetTag)
+		MODXML_MAKERULE(PackageTag)
+		MODXML_MAKERULE(PackagesTag)
 		MODXML_MAKERULE(ModuleTag)
 	};
 }

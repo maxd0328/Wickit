@@ -27,7 +27,7 @@ namespace wckt::base
             bool isBundle() const;
     };
 
-	class Package
+	class Package : public XMLObject
 	{
 		private:
 			std::string name;
@@ -47,7 +47,7 @@ namespace wckt::base
 			const std::vector<URL>& getAssets() const;
 	};
 	
-	class ModuleComponent
+	class ModuleComponent : public XMLObject
 	{
 		public:
 			virtual ~ModuleComponent() = default;

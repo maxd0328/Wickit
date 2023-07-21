@@ -22,6 +22,14 @@ namespace wckt::base
 		std::vector<_Ty> vec;
 		~XMLVector() override = default;
 	};
+
+	template<typename _Ty>
+	struct XMLWrapper : public XMLObject
+	{
+		_Ty val;
+		XMLWrapper(const _Ty& val);
+		~XMLWrapper() override = default;
+	};
 	
 	class TagRule
 	{

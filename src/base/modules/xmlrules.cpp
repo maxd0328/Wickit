@@ -1,6 +1,7 @@
 #include "base/modules/xmlrules.h"
 #include "base/modules/module.h"
 #include "include/exception.h"
+#include "type/access.h"
 
 using namespace wckt::base;
 using namespace wckt::base::modxml;
@@ -9,7 +10,7 @@ MODXML_IMPLRULE(DependencyTag, "dependency", _INIT(_REQ("src"), _OPT("bundle", "
 _APPLY_TAG_RULE(DependencyTag::)
 {
 	assert(arguments["bundle"] == "true" || arguments["bundle"] == "false", "bundle must be a boolean value");
-	return std::make_unique<ModuleDependency>(URL(arguments.at("src"), parser.getURL()), sym::Locator(arguments["pckg"]),
+	return std::make_unique<ModuleDependency>(URL(arguments["src"], parser.getURL()), sym::Locator(arguments["pckg"]),
 		sym::Locator(arguments["into"]), arguments["bundle"] == "true");
 }
 
@@ -22,6 +23,22 @@ _APPLY_TAG_RULE(DependenciesTag::)
 		dependencies->vec.push_back(dynamic_cast<ModuleDependency&>(*dependency));
 	}
 	return dependencies;
+}
+
+MODXML_IMPLRULE(AssetTag, "asset", _INIT(_REQ("src")), _INIT())
+_APPLY_TAG_RULE(AssetTag::)
+{
+	return std::make_unique<XMLWrapper<URL>>(URL(arguments["src"]));
+}
+
+MODXML_IMPLRULE(PackageTag, "package", _INIT(_REQ("name"), _OPT("visibility", "public")), _INIT(PackageTag::PTR, AssetTag::PTR))
+_APPLY_TAG_RULE(PackageTag::)
+{
+	std::string visibility = arguments["visibility"];
+	bool vmatch = false;
+	for(type::Visibility v : _VIS_VEC)
+		if(v.toString() == visibility)
+			vmatch = true;
 }
 
 MODXML_IMPLRULE(ModuleTag, "module", _INIT(), _INIT(DependenciesTag::PTR))

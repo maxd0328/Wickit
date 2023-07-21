@@ -12,6 +12,10 @@ ElementNotFoundError::ElementNotFoundError(const std::string& message)
 : std::runtime_error(message)
 {}
 
+BadArgumentException::BadArgumentException(const std::string& message)
+: std::runtime_error(message)
+{}
+
 IOError::IOError(const std::string& message)
 : std::runtime_error(message)
 {}

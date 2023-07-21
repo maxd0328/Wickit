@@ -20,6 +20,12 @@ struct ElementNotFoundError : public std::runtime_error
 	~ElementNotFoundError() = default;
 };
 
+struct BadArgumentException : public std::runtime_error
+{
+    BadArgumentException(const std::string& message);
+    ~BadArgumentException() = default;
+};
+
 struct IOError : public std::runtime_error
 {
 	IOError(const std::string& message);
