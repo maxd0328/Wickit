@@ -39,5 +39,7 @@ namespace wckt::type
 			bool operator<(Visibility other) const;
 			bool operator>=(Visibility other) const;
 			bool operator<=(Visibility other) const;
+			
+			static Visibility fromString(const std::string& str);
 	};
 }

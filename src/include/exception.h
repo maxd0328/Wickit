@@ -26,6 +26,12 @@ struct BadArgumentException : public std::runtime_error
     ~BadArgumentException() = default;
 };
 
+struct CorruptStateException : public std::runtime_error
+{
+	CorruptStateException(const std::string& message);
+	~CorruptStateException() = default;
+};
+
 struct IOError : public std::runtime_error
 {
 	IOError(const std::string& message);

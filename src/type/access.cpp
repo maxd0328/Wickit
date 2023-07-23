@@ -1,4 +1,5 @@
 #include "type/access.h"
+#include "include/exception.h"
 
 using namespace wckt::type;
 
@@ -33,3 +34,13 @@ bool Visibility::operator>(Visibility other) const { return this->value > other.
 bool Visibility::operator<(Visibility other) const { return this->value < other.value; }
 bool Visibility::operator>=(Visibility other) const { return this->value >= other.value; }
 bool Visibility::operator<=(Visibility other) const { return this->value <= other.value; }
+
+Visibility Visibility::fromString(const std::string& str)
+{
+	for(Visibility v : _VIS_VEC)
+	{
+		if(v.toString() == str)
+			return v;
+	}
+	throw BadArgumentException("\'" + str + "\' is not a visibility modifier");
+}

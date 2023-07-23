@@ -32,10 +32,16 @@ bool ModuleDependency::isBundle() const
 	return this->bundle;
 }
 
+Package::Package()
+: visibility(VIS_PUBLIC)
+{
+	this->name = "";
+}
+
 Package::Package(const std::string& name, type::Visibility visibility, const std::vector<Package>& children, const std::vector<URL>& assets)
+: visibility(visibility)
 {
 	this->name = name;
-	this->visibility = visibility;
 	this->children = children;
 	this->assets = assets;
 }
@@ -87,12 +93,11 @@ sym::Locator EntryComponent::getLocator() const
 	return this->locator;
 }
 
-Module::Module(const URL& modulefile, const std::vector<ModuleDependency>& dependencies, const std::vector<Package>& packages,
+Module::Module(const URL& modulefile, const std::vector<ModuleDependency>& dependencies, const Package& rootPackage,
 	const std::map<std::string, std::unique_ptr<ModuleComponent>>& components)
-: XMLObject(), modulefile(modulefile)
+: XMLObject(), modulefile(modulefile), rootPackage(rootPackage)
 {
 	this->dependencies = dependencies;
-	this->packages = packages;
 	this->components = components;
 }
 
@@ -106,9 +111,9 @@ const std::vector<ModuleDependency>& Module::getDependencies() const
 	return this->dependencies;
 }
 
-const std::vector<Package>& Module::getPackages() const
+const Package& Module::getRootPackage() const
 {
-	return this->packages;
+	return this->rootPackage;
 }
 
 const std::map<std::string, std::unique_ptr<ModuleComponent>>& Module::getComponents() const
@@ -116,9 +121,19 @@ const std::map<std::string, std::unique_ptr<ModuleComponent>>& Module::getCompon
 	return this->components;
 }
 
-const std::unique_ptr<ModuleComponent>& Module::getComponent(const std::string& name) const
+BuildComponent& Module::getBuildComponent() const
+{
+	return dynamic_cast<BuildComponent&>(getComponent("build"));
+}
+
+EntryComponent& Module::getEntryComponent() const
+{
+	return dynamic_cast<EntryComponent&>(getComponent("entry"));
+}
+
+ModuleComponent& Module::getComponent(const std::string& name) const
 {
 	if(this->components.find(name) == this->components.end())
 		throw ElementNotFoundError("No component found");
-	return this->components.at(name);
+	return *this->components.at(name);
 }

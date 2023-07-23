@@ -130,6 +130,7 @@ Attributes:
 
 Children:
  * `<package>`
+ * `<asset>`
 
 ### 3.5 Package Tag `<package ...>`
 
@@ -193,7 +194,6 @@ Children:
 
 Attributes:
  * `symbol`: The function, referenced from the root package, at which to start execution of this module.
- * `defer`: The dependency to which entry should be deferred. That is, use a dependency's entry point instead. Note that either this attribute or the `symbol` attribute must be used, and not both.
 
 Children:
  * None

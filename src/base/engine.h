@@ -20,6 +20,8 @@ namespace wckt::base
 			static void terminateInstance(uint32_t contextID);
 			static void terminateInstance(const EngineContext& context);
 			
+			static void terminateAllInstances();
+			
 			static const EngineContext& getContext(uint32_t contextID);
 			
 		private:

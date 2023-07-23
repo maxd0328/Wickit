@@ -1,12 +1,8 @@
 #include "base/xmlparser.h"
 #include "include/exception.h"
+#include "include/strutil.h"
 
 using namespace wckt::base;
-
-template<typename _Ty>
-XMLWrapper<_Ty>::XMLWrapper(const _Ty& val)
-: val(val)
-{}
 
 TagRule::TagRule(const std::string& name, const std::vector<argument_t>& arguments, const std::vector<std::shared_ptr<TagRule>>& children)
 {
@@ -35,6 +31,8 @@ std::vector<std::shared_ptr<TagRule>> TagRule::getChildren() const
 #define __VSRC		__PVEC.src
 #define __VPOS		__PVEC.pos
 #define __VCHAR		( __VPOS >= __VSRC.length() ? '\0' : __VSRC[__VPOS] )
+#define __VLINENO	__PVEC.lineNo
+#define __VLINEPOS	__PVEC.linePos
 #define __VPARSER	__PVEC.parser
 
 #define __WHITESPACE	std::string("\n\r\t\0 ")
@@ -43,6 +41,8 @@ typedef struct
 {
 	std::string src;
 	uint32_t pos;
+	uint32_t lineNo;
+	uint32_t linePos;
 	const XMLParser* parser;
 } xmlparse_t;
 
@@ -65,13 +65,29 @@ inline static std::string getSource(const URL& url, const std::string& resourceN
 	}
 }
 
+static std::string getLocatorString(__PVEC_ARG)
+{
+	return "[" + __VPARSER->getURL()->toString() + "]:" + std::to_string(__VLINENO) + ":" + std::to_string(__VPOS - __VLINEPOS + 1);
+}
+
+static std::string getTracebackString(__PVEC_ARG)
+{
+	uint32_t endIndex = __VSRC.find('\n', __VLINEPOS);
+	std::string src = endIndex != std::string::npos ? __VSRC.substr(__VLINEPOS, endIndex - __VLINEPOS) : __VSRC.substr(__VLINEPOS);
+	trim(src);
+	return "--> " + src;
+}
+
+// [file://src/module.xml]:10:1 - Invalid token '!', expected '<'
+// --> !<dependencies>
+
 struct parse_error : public std::runtime_error
 {
 	public:
-		parse_error(const std::string& token, const std::string& expected)
-		: std::runtime_error("Invalid token \'" + token + "\', expected " + expected) {}
-		parse_error(const std::string& message)
-		: std::runtime_error(message) {}
+		parse_error(const std::string& token, const std::string& expected, __PVEC_ARG)
+		: std::runtime_error(getLocatorString(__PVEC) + " - Invalid token \'" + token + "\', expected " + expected + "\n" + getTracebackString(__PVEC)) {}
+		parse_error(const std::string& message, __PVEC_ARG)
+		: std::runtime_error(getLocatorString(__PVEC) + " - " + message + "\n" + getTracebackString(__PVEC)) {}
 };
 
 inline static void jumpWhitespace(__PVEC_ARG)
@@ -85,7 +101,7 @@ inline static void consume(char ch, __PVEC_ARG)
 	jumpWhitespace(__PVEC);
 	if(__VCHAR == ch)
 		__VPOS++;
-	else throw parse_error(std::string(1, __VCHAR), std::string("\'") + ch + "\'");
+	else throw parse_error(std::string(1, __VCHAR), std::string("\'") + ch + "\'", __PVEC);
 }
 
 inline static bool consumeOptional(char ch, __PVEC_ARG)
@@ -120,7 +136,7 @@ static std::string consumeIdentifier(__PVEC_ARG)
 		
 		return __VSRC.substr(start, __VPOS - start);
 	}
-	else throw parse_error(std::string(1, __VCHAR), "identifier");
+	else throw parse_error(std::string(1, __VCHAR), "identifier", __PVEC);
 }
 
 static inline std::string consumeString(__PVEC_ARG)
@@ -140,14 +156,14 @@ static inline std::string consumeString(__PVEC_ARG)
 			else if(ch == '\"' && !escape)
 				break;
 			else if(ch == '\n' || ch == '\0')
-				throw parse_error("", "\'\"\'");
+				throw parse_error("", "\'\"\'", __PVEC);
 			__VPOS++;
 		}
 		
 		__VPOS++;
 		return __VSRC.substr(start + 1, __VPOS - 2 - start);
 	}
-	else throw parse_error(std::string(1, __VCHAR), "string");
+	else throw parse_error(std::string(1, __VCHAR), "string", __PVEC);
 }
 
 static inline bool foundArgument(const std::vector<TagRule::argument_t>& arguments, const std::string& argument)
@@ -172,7 +188,7 @@ static tagoutput_t parseTag(const std::vector<std::shared_ptr<TagRule>>& rules, 
 		}
 	}
 	if(rule == nullptr)
-		throw parse_error("Disallowed tag name \'" + header + "\'");
+		throw parse_error("Disallowed tag name \'" + header + "\'", __PVEC);
 	
 	TagRule::argmap_t arguments;
 	while(!consumeOptional('>', __PVEC))
@@ -184,20 +200,20 @@ static tagoutput_t parseTag(const std::vector<std::shared_ptr<TagRule>>& rules, 
 		else argumentValue = "true";
 		
 		if(arguments.find(argumentKey) != arguments.end())
-			throw parse_error("Duplicate argument \'" + argumentKey + "\'");
+			throw parse_error("Duplicate argument \'" + argumentKey + "\'", __PVEC);
 		arguments[argumentKey] = argumentValue;
 	}
 	
 	for(const auto& entry : arguments)
 		if(!foundArgument(rule->getArguments(), entry.first))
-			throw parse_error("Disallowed argument \'" + entry.first + "\'");
+			throw parse_error("Disallowed argument \'" + entry.first + "\'", __PVEC);
 	for(const auto& expectedArgument : rule->getArguments())
 	{
 		if(arguments.find(expectedArgument.name) == arguments.end())
 		{
 			if(!expectedArgument.required)
 				arguments[expectedArgument.name] = expectedArgument.defaultValue;
-			else throw parse_error("Missing argument \'" + expectedArgument.name + "\'");
+			else throw parse_error("Missing argument \'" + expectedArgument.name + "\'", __PVEC);
 		}
 	}
 	
@@ -219,7 +235,7 @@ static tagoutput_t parseTag(const std::vector<std::shared_ptr<TagRule>>& rules, 
 		}
 		std::string footer = consumeIdentifier(__PVEC);
 		if(footer != header)
-			throw parse_error(std::string("Unexpected tag name \'") + footer + "\', expected \'" + header + "\'");
+			throw parse_error(std::string("Unexpected tag name \'") + footer + "\', expected \'" + header + "\'", __PVEC);
 		consume('>', __PVEC);
 	}
 	
@@ -229,7 +245,7 @@ static tagoutput_t parseTag(const std::vector<std::shared_ptr<TagRule>>& rules, 
 	}
 	catch(const std::exception& e)
 	{
-		throw parse_error(e.what());
+		throw parse_error(e.what(), __PVEC);
 	}
 }
 
@@ -254,11 +270,11 @@ std::shared_ptr<TagRule> XMLParser::getRule() const
 
 std::unique_ptr<XMLObject> XMLParser::build() const
 {
-	xmlparse_t __PVEC = { getSource(*this->url, this->resourceName), 0, this };
+	xmlparse_t __PVEC = { getSource(*this->url, this->resourceName), 0, 1, 0, this };
 	tagoutput_t output = parseTag({ this->rule }, __PVEC);
 	
 	consumeOptional('\0', __PVEC);
 	if(__VCHAR != '\0')
-		throw parse_error(std::string(1, __VCHAR), "end of stream");
+		throw parse_error(std::string(1, __VCHAR), "end of stream", __PVEC);
 	return std::move(output.object);
 }

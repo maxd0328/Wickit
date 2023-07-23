@@ -48,6 +48,12 @@ void Engine::terminateInstance(const EngineContext& context)
 	contexts.erase(context.getContextID());
 }
 
+void Engine::terminateAllInstances()
+{
+	instances.clear();
+	contexts.clear();
+}
+
 const EngineContext& Engine::getContext(uint32_t contextID)
 {
 	if(contexts.find(contextID) == contexts.end())

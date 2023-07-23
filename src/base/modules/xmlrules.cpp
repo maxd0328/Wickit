@@ -1,8 +1,10 @@
 #include "base/modules/xmlrules.h"
 #include "base/modules/module.h"
 #include "include/exception.h"
+#include "symbol/locator.h"
 #include "type/access.h"
 
+using namespace wckt;
 using namespace wckt::base;
 using namespace wckt::base::modxml;
 
@@ -28,26 +30,116 @@ _APPLY_TAG_RULE(DependenciesTag::)
 MODXML_IMPLRULE(AssetTag, "asset", _INIT(_REQ("src")), _INIT())
 _APPLY_TAG_RULE(AssetTag::)
 {
-	return std::make_unique<XMLWrapper<URL>>(URL(arguments["src"]));
+	return std::make_unique<XMLWrapper<URL>>(URL(arguments["src"], parser.getURL()));
 }
 
 MODXML_IMPLRULE(PackageTag, "package", _INIT(_REQ("name"), _OPT("visibility", "public")), _INIT(PackageTag::PTR, AssetTag::PTR))
 _APPLY_TAG_RULE(PackageTag::)
 {
-	std::string visibility = arguments["visibility"];
-	bool vmatch = false;
-	for(type::Visibility v : _VIS_VEC)
-		if(v.toString() == visibility)
-			vmatch = true;
+	std::vector<Package> packages;
+	std::vector<URL> assets;
+	for(const auto& package : children["package"])
+		packages.push_back(dynamic_cast<Package&>(*package));
+	for(const auto& asset : children["assets"])
+		assets.push_back(dynamic_cast<XMLWrapper<URL>&>(*asset).val);
+	return std::make_unique<Package>(arguments["name"], type::Visibility::fromString(arguments["visibility"]), packages, assets);
 }
 
-MODXML_IMPLRULE(ModuleTag, "module", _INIT(), _INIT(DependenciesTag::PTR))
-_APPLY_TAG_RULE(ModuleTag::)
+MODXML_IMPLRULE(PackagesTag, "packages", _INIT(), _INIT(PackageTag::PTR, AssetTag::PTR))
+_APPLY_TAG_RULE(PackagesTag::)
 {
-	assert(children["dependencies"].size() <= 1, "Dependencies tag may only be declared once");
-	std::vector<ModuleDependency> dependencies;
-	if(children["dependencies"].size() == 1)
-		dependencies = dynamic_cast<XMLVector<ModuleDependency>&>(*children["dependencies"][0]).vec;
+	std::vector<Package> packages;
+	std::vector<URL> assets;
+	for(const auto& package : children["package"])
+		packages.push_back(dynamic_cast<Package&>(*package));
+	for(const auto& asset : children["assets"])
+		assets.push_back(dynamic_cast<XMLWrapper<URL>&>(*asset).val);
+	return std::make_unique<Package>("", VIS_PUBLIC, packages, assets);
+}
+
+namespace
+{
+	struct mount_t : public XMLObject
+	{
+		mount_t(const sym::Locator& locator, URL url)
+		: locator(locator), url(url) {}
+		
+		sym::Locator locator;
+		URL url;
+	};
+}
+
+MODXML_IMPLRULE(MountTag, "mount", _INIT(_REQ("pckg"), _REQ("dst")), _INIT())
+_APPLY_TAG_RULE(MountTag::)
+{
+	return std::make_unique<mount_t>(sym::Locator(arguments["pckg"]), URL(arguments["dst"], parser.getURL()));
+}
+
+MODXML_IMPLRULE(BuildTag, "build", _INIT(_OPT("dst", "%default%")), _INIT(MountTag::PTR))
+_APPLY_TAG_RULE(BuildTag::)
+{
+	std::map<sym::Locator, URL> mounts;
+	URL dst = arguments["dst"] == "%default%" ? URL(parser.getURL()->getProtocol(), "build", parser.getURL()) : URL(arguments["dst"], parser.getURL());
+	mounts[sym::Locator("")] = dst;
 	
-	return std::make_unique<Module>(*parser.getURL(), dependencies);
+	for(const auto& obj : children["mount"])
+	{
+		const mount_t* mount = dynamic_cast<const mount_t*>(obj.get());
+		mounts[mount->locator] = mount->url;
+	}
+	
+	return std::make_unique<BuildComponent>(mounts);
+}
+
+MODXML_IMPLRULE(EntryTag, "entry", _INIT(_REQ("symbol")), _INIT())
+_APPLY_TAG_RULE(EntryTag::)
+{
+	return std::make_unique<EntryComponent>(sym::Locator(arguments["symbol"]));
+}
+
+const std::shared_ptr<ModuleBuilder> ModuleBuilder::DEFAULT = std::make_shared<ModuleBuilder>();
+
+static bool ruleFound(const std::string& ruleName, const std::vector<std::shared_ptr<TagRule>>& componentRules)
+{
+	for(std::shared_ptr<TagRule> rule : componentRules)
+		if(rule->getName() == ruleName)
+			return true;
+	return false;
+}
+
+static std::vector<std::shared_ptr<TagRule>> generateComponentRules(const std::vector<std::shared_ptr<TagRule>>& componentRules)
+{
+	std::vector<std::shared_ptr<TagRule>> outVec = { DependenciesTag::PTR, PackagesTag::PTR, BuildTag::PTR, EntryTag::PTR };
+	outVec.insert(outVec.end(), componentRules.begin(), componentRules.end());
+	return outVec;
+}
+
+ModuleBuilder::ModuleBuilder(const std::vector<std::shared_ptr<TagRule>>& componentRules)
+: TagRule("module", _INIT(), generateComponentRules(componentRules))
+{}
+
+_APPLY_TAG_RULE(ModuleBuilder::)
+{
+	for(const auto& childList : children)
+		assert(childList.second.size() <= 1, "Each tag under module may only be declared once");
+		
+	std::vector<ModuleDependency> dependencies;
+	Package rootPackage;
+	std::map<std::string, std::unique_ptr<ModuleComponent>> components;
+	
+	for(auto& childList : children)
+	{
+		if(childList.first == "dependencies" && childList.second.size() == 1)
+			dependencies = dynamic_cast<XMLVector<ModuleDependency>&>(*childList.second[0]).vec;
+		else if(childList.first == "packages" && childList.second.size() == 1)
+			rootPackage = dynamic_cast<Package&>(*childList.second[0]);
+		else
+		{
+			ModuleComponent* raw = dynamic_cast<ModuleComponent*>(childList.second[0].release());
+			assert(raw != nullptr, "[Internal assertion] XMLObject returned by component rules must be an instance of ModuleComponent");
+			components[childList.first] = std::unique_ptr<ModuleComponent>(raw);
+		}
+	}
+	
+	return std::make_unique<Module>(*parser.getURL(), dependencies, rootPackage, components);
 }

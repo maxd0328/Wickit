@@ -10,12 +10,12 @@ namespace
 	{
 		~StringProtocol() override = default;
 		
-		std::unique_ptr<std::istream> istream(const std::string& source, std::shared_ptr<URL> parent) const override
+		std::unique_ptr<std::istream> istream(const std::string& source, std::shared_ptr<URL> parent, bool textMode) const override
 		{
 			return std::make_unique<std::istringstream>(source);
 		}
 
-		std::unique_ptr<std::ostream> ostream(const std::string& source, std::shared_ptr<URL> parent) const override
+		std::unique_ptr<std::ostream> ostream(const std::string& source, std::shared_ptr<URL> parent, bool textMode) const override
 		{
 			throw UnsupportedOperationError("StringProtocol::ostream");
 		}
@@ -23,6 +23,11 @@ namespace
 		bool equals(const std::string& s0, std::shared_ptr<URL> p0, const std::string& s1, std::shared_ptr<URL> p1) const override
 		{
 			return s0 == s1;
+		}
+		
+		std::size_t hash(const std::string& source, std::shared_ptr<URL> parent) const override
+		{
+			return 4095 ^ (std::hash<std::string>()(source) << 1);
 		}
 		
 		std::string append(const std::string& source, const std::string& elem) const override
@@ -46,19 +51,31 @@ namespace
 			return sourcepath;
 		}
 		
-		std::unique_ptr<std::istream> istream(const std::string& source, std::shared_ptr<URL> parent) const override
+		static inline std::filesystem::path canonical(const std::filesystem::path& path)
+		{
+			try
+			{
+				return std::filesystem::canonical(path);
+			}
+			catch(const std::filesystem::filesystem_error& e)
+			{
+				throw IOError(std::string("Could not compute canonical path: ") + e.what());
+			}
+		}
+		
+		std::unique_ptr<std::istream> istream(const std::string& source, std::shared_ptr<URL> parent, bool textMode) const override
 		{
 			auto sourcepath = computePath(source, parent);
-			auto stream = std::make_unique<std::ifstream>(sourcepath);
+			auto stream = std::make_unique<std::ifstream>(sourcepath, std::ios::in | (textMode ? 0 : std::ios::binary));
 			if(!stream->is_open())
 				throw IOError("Failed to open file: " + sourcepath.string());
 			return stream;
 		}
 
-		std::unique_ptr<std::ostream> ostream(const std::string& source, std::shared_ptr<URL> parent) const override
+		std::unique_ptr<std::ostream> ostream(const std::string& source, std::shared_ptr<URL> parent, bool textMode) const override
 		{
 			auto sourcepath = computePath(source, parent);
-			auto stream = std::make_unique<std::ofstream>(sourcepath, std::ios_base::binary);
+			auto stream = std::make_unique<std::ofstream>(sourcepath, std::ios::out | (textMode ? 0 : std::ios::binary));
 			if(!stream->is_open())
 				throw IOError("Failed to open file: " + sourcepath.string());
 			return stream;
@@ -67,8 +84,15 @@ namespace
 		bool equals(const std::string& s0, std::shared_ptr<URL> p0, const std::string& s1, std::shared_ptr<URL> p1) const override
 		{
 			auto path0 = computePath(s0, p0), path1 = computePath(s1, p1);
-			auto norm0 = std::filesystem::canonical(path0), norm1 = std::filesystem::canonical(path1);
+			auto norm0 = canonical(path0), norm1 = canonical(path1);
 			return norm0 == norm1;
+		}
+		
+		std::size_t hash(const std::string& source, std::shared_ptr<URL> parent) const override
+		{
+			auto path = computePath(source, parent);
+			auto norm = canonical(path);
+			return 65535 ^ (std::hash<std::string>()(norm.string()) << 2);
 		}
 		
 		std::string append(const std::string& source, const std::string& elem) const override
@@ -147,21 +171,26 @@ std::shared_ptr<URL> URL::getParent() const
 	return this->parent;
 }
 
-std::unique_ptr<std::istream> URL::toInputStream() const
+std::string URL::toString() const
 {
-    return this->protocol->istream(this->source, this->parent);
+	return getProtocolName(this->protocol) + "://" + this->source;
 }
 
-std::string URL::read() const
+std::unique_ptr<std::istream> URL::toInputStream(bool textMode) const
+{
+    return this->protocol->istream(this->source, this->parent, textMode);
+}
+
+std::string URL::read(bool textMode) const
 {
     std::string result;
-    result.assign(std::istreambuf_iterator<char>(*this->toInputStream()), std::istreambuf_iterator<char>());
+    result.assign(std::istreambuf_iterator<char>(*this->toInputStream(textMode)), std::istreambuf_iterator<char>());
     return result;
 }
 
-std::unique_ptr<std::ostream> URL::toOutputStream() const
+std::unique_ptr<std::ostream> URL::toOutputStream(bool textMode) const
 {
-	return this->protocol->ostream(this->source, this->parent);
+	return this->protocol->ostream(this->source, this->parent, textMode);
 }
 
 bool URL::operator==(const URL& other) const
@@ -186,4 +215,19 @@ URL URL::operator+(const std::string& elem) const
 URL& URL::operator+=(const std::string& elem)
 {
 	this->source = this->protocol->append(this->source, elem);
+}
+
+std::string URL::getProtocolName(std::shared_ptr<URLProtocol> protocol)
+{
+	for(const auto& entry : knownProtocols)
+	{
+		if(entry.second == protocol)
+			return entry.first;
+	}
+	return "<unknown protocol>";
+}
+
+std::size_t __impl_URLHasher__::operator()(const URL& elem) const
+{
+	return elem.getProtocol()->hash(elem.getSource(), elem.getParent());
 }

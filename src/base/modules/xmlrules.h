@@ -21,6 +21,19 @@ namespace wckt::base
 		MODXML_MAKERULE(AssetTag)
 		MODXML_MAKERULE(PackageTag)
 		MODXML_MAKERULE(PackagesTag)
-		MODXML_MAKERULE(ModuleTag)
+		MODXML_MAKERULE(MountTag)
+		MODXML_MAKERULE(BuildTag)
+		MODXML_MAKERULE(EntryTag)
 	};
+	
+	class ModuleBuilder : public TagRule
+		{
+			public:
+				static const std::shared_ptr<ModuleBuilder> DEFAULT;
+				
+				ModuleBuilder(_VECARG(std::shared_ptr<TagRule>, componentRules));
+				~ModuleBuilder() = default;
+				
+				_APPLY_TAG_RULE() override;
+		};
 }

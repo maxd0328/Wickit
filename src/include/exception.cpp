@@ -16,6 +16,10 @@ BadArgumentException::BadArgumentException(const std::string& message)
 : std::runtime_error(message)
 {}
 
+CorruptStateException::CorruptStateException(const std::string& message)
+: std::runtime_error(message)
+{}
+
 IOError::IOError(const std::string& message)
 : std::runtime_error(message)
 {}

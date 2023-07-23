@@ -2,32 +2,23 @@
 
 #include "include/definitions.h"
 #include "base/modules/module.h"
+#include "base/modules/xmlrules.h"
 #include "symbol/symbol.h"
 
 namespace wckt::base
 {
     class EngineContext
     {
+		public:
+			typedef std::unordered_map<URL, std::unique_ptr<Module>, URL::hasher_t> modulemap_t;
+		
         private:
 			uint32_t contextID;
-			std::vector<URL> unloadedModules;
-			std::vector<Module> loadedModules;
-			std::unique_ptr<sym::Namespace> declarationSpace;
-
+			
 		public:
+			EngineContext();
+			~EngineContext() = default;
+			
 			uint32_t getContextID() const;
-			
-			void registerModule(const URL& url);
-			void addModule(const Module& module);
-			void loadAllModules();
-
-			const std::vector<URL>& getUnloadedModules() const;
-			const std::vector<Module>& getLoadedModules() const;
-
-			const Module& getModule(const URL& url) const;
-			void unloadModule(const URL& url);
-			
-			const sym::Namespace* getDeclarationSpace() const;
-			sym::Namespace* getDeclarationSpace();
     };
 }

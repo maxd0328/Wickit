@@ -37,6 +37,7 @@ namespace wckt::base
 			std::vector<URL> assets;
 			
 		public:
+			Package();
 			Package(const std::string& name, type::Visibility visibility, _VECARG(Package, children), _VECARG(URL, assets));
 			~Package() = default;
 			
@@ -85,19 +86,24 @@ namespace wckt::base
         private:
             URL modulefile;
             std::vector<ModuleDependency> dependencies;
-			std::vector<Package> packages;
+			Package rootPackage;
 			std::map<std::string, std::unique_ptr<ModuleComponent>> components;
 			
         public:
-            Module(const URL& modulefile, _VECARG(ModuleDependency, dependencies), _VECARG(Package, packages),
+            Module(const URL& modulefile, _VECARG(ModuleDependency, dependencies), const Package& rootPackage = Package(),
 				_MAPARG(std::string, std::unique_ptr<ModuleComponent>, components));
 			~Module() = default;
 			
 			URL getModulefile() const;
 			const std::vector<ModuleDependency>& getDependencies() const;
-			const std::vector<Package>& getPackages() const;
+			const Package& getRootPackage() const;
 			const std::map<std::string, std::unique_ptr<ModuleComponent>>& getComponents() const;
 			
-			const std::unique_ptr<ModuleComponent>& getComponent(const std::string& name) const;
+			/* Returns nullptr if not applicable */
+			BuildComponent& getBuildComponent() const;
+			/* Returns nullptr if not applicable */
+			EntryComponent& getEntryComponent() const;
+			
+			ModuleComponent& getComponent(const std::string& name) const;
     };
 }

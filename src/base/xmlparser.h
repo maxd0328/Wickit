@@ -27,7 +27,7 @@ namespace wckt::base
 	struct XMLWrapper : public XMLObject
 	{
 		_Ty val;
-		XMLWrapper(const _Ty& val);
+		XMLWrapper(const _Ty& val): val(val) {}
 		~XMLWrapper() override = default;
 	};
 	
