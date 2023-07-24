@@ -10,35 +10,46 @@ namespace wckt::sym
 	class Symbol
 	{
 		private:
-			std::string name;
-			std::unique_ptr<Locator> locator;
+			Locator locator;
 		
 		public:
-			Symbol(const std::string& name, std::unique_ptr<Locator> locator);
+			Symbol();
 			virtual ~Symbol() = default;
 			
-			std::string getName() const;
-			const Locator& getLocator() const;
+			Locator getLocator() const;
+
+			friend class Namespace;
+	};
+
+	class ReferenceSymbol : public Symbol
+	{
+		private:
+			uint32_t module;
+			Locator target;
+
+		public:
+			ReferenceSymbol(uint32_t module, const Locator& target);
+			~ReferenceSymbol() override = default;
+
+			uint32_t getModule() const;
+			Locator getTarget() const;
 	};
 	
 	class Namespace : public Symbol
 	{
-		public:
-			static const uint32_t npos = -1;
-		
 		private:
-			std::vector<std::unique_ptr<Symbol>> symbols;
+			std::map<std::string, std::unique_ptr<Symbol>> symbols;
 			
 		public:
-			Namespace(const std::string& name, std::unique_ptr<Locator> locator);
+			Namespace();
 			~Namespace() override = default;
 			
-			const Symbol* getSymbol(uint32_t index) const;
-			Symbol* getSymbol(uint32_t index);
-			uint32_t find(const std::string& symbol) const;
+			bool isDeclared(const std::string& name) const;
+			const Symbol& getSymbol(const std::string& name) const;
+			Symbol& getSymbol(const std::string& name);
 			
-			void declareSymbol(std::unique_ptr<Symbol> symbol);
-			void undeclareSymbol(uint32_t index);
+			void declareSymbol(const std::string& name, std::unique_ptr<Symbol> symbol);
+			void undeclareSymbol(const std::string& name);
 	};
 
 	class SymbolResolutionError : public std::runtime_error

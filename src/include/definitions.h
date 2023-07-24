@@ -10,6 +10,7 @@
 #include <sstream>
 #include <memory>
 #include <map>
+#include <unordered_map>
 #include <functional>
 #include <cctype>
 #include <algorithm>

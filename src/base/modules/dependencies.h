@@ -3,6 +3,7 @@
 #include "include/definitions.h"
 #include "base/url.h"
 #include "base/modules/module.h"
+#include "base/modules/xmlrules.h"
 
 namespace wckt::base
 {

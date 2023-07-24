@@ -5,22 +5,26 @@
 #include "include/exception.h"
 #include <regex>
 
+using namespace wckt;
 using namespace wckt::sym;
 
 // TODO integrate this with tokenizer for consistent identifiers
 static std::regex identifierRegex("[A_Za-z$_][A_Za-z0-9$_]*");
 
-Locator::Locator()
+Locator::Locator(base::moduleid_t moduleID)
+: moduleID(moduleID)
 {}
 
-Locator::Locator(const std::vector<std::string>& pckgs)
+Locator::Locator(base::moduleid_t moduleID, const std::vector<std::string>& pckgs)
+: moduleID(moduleID)
 {
     for(const auto& pckg : pckgs)
         assert(std::regex_match(pckg, identifierRegex), "Package \'" + pckg + "\' is not an identifier");
     this->pckgs = pckgs;
 }
 
-Locator::Locator(const std::string& signature)
+Locator::Locator(base::moduleid_t moduleID, const std::string& signature)
+: moduleID(moduleID)
 {
     std::string cur = signature;
     uint32_t pos;
@@ -42,6 +46,11 @@ Locator::Locator(const std::string& signature)
     this->pckgs.push_back(cur);
 }
 
+base::moduleid_t Locator::getModuleID() const
+{
+	return this->moduleID;
+}
+
 std::vector<std::string> Locator::getPackages() const
 {
     return this->pckgs;
@@ -58,17 +67,14 @@ uint32_t Locator::length() const
 }
 
 template<typename __Tc, typename __Ts, typename __Tn>
-static __Ts* locateImpl(const std::vector<std::string>& pckgs, __Tc& context)
-{
+static __Ts* locateImpl(const std::vector<std::string>& pckgs, base::moduleid_t moduleID, __Tc& context)
+{ // KEEP WORKING ON THIS
 	__Ts* symbol = context.getDeclarationSpace();
 	for(const auto& pckg : pckgs)
 	{
 		if(__Tn* n = dynamic_cast<__Tn*>(symbol))
 		{
-			uint32_t index = n->find(pckg);
-			if(index == Namespace::npos)
-				throw SymbolResolutionError(SymbolResolutionError::NOT_FOUND, symbol->getLocator() + pckg);
-			symbol = n->getSymbol(index);
+			symbol = n->getSymbol(pckg);
 		}
 		else throw SymbolResolutionError(SymbolResolutionError::NOT_NAMESPACE, symbol->getLocator());
 	}

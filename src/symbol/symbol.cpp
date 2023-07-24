@@ -3,57 +3,66 @@
 
 using namespace wckt::sym;
 
-Symbol::Symbol(const std::string& name, std::unique_ptr<Locator> locator)
-{
-    this->name = name;
-    this->locator = std::move(locator);
-}
-
-std::string Symbol::getName() const
-{
-    return this->name;
-}
-
-const Locator& Symbol::getLocator() const
-{
-    return *this->locator;
-}
-
-Namespace::Namespace(const std::string& name, std::unique_ptr<Locator> locator)
-: Symbol(name, std::move(locator))
+Symbol::Symbol()
 {}
 
-const Symbol* Namespace::getSymbol(uint32_t index) const
+Locator Symbol::getLocator() const
 {
-    return this->symbols[index].get();
+    return this->locator;
 }
 
-Symbol* Namespace::getSymbol(uint32_t index)
+ReferenceSymbol::ReferenceSymbol(uint32_t module, const Locator& target)
+: target(target)
 {
-    return this->symbols[index].get();
+    this->module = module;
 }
 
-uint32_t Namespace::find(const std::string& symbol) const
+uint32_t ReferenceSymbol::getModule() const
 {
-    for(uint32_t i = 0 ; i < this->symbols.size() ; ++i)
-    {
-        if(this->symbols[i]->getName() == symbol)
-            return i;
-    }
-    return npos;
+    return this->module;
 }
 
-void Namespace::declareSymbol(std::unique_ptr<Symbol> symbol)
+Locator ReferenceSymbol::getTarget() const
 {
-    uint32_t index = find(symbol->getName());
-    if(index != npos)
-        throw SymbolResolutionError(SymbolResolutionError::DUP_DECL, this->symbols[index]->getLocator());
-    this->symbols.push_back(std::move(symbol));
+    return this->target;
 }
 
-void Namespace::undeclareSymbol(uint32_t index)
+Namespace::Namespace()
+: Symbol()
+{}
+
+bool Namespace::isDeclared(const std::string& name) const
 {
-    this->symbols.erase(this->symbols.begin() + index);
+    return this->symbols.find(name) != this->symbols.end();
+}
+
+const Symbol& Namespace::getSymbol(const std::string& name) const
+{
+    try { return *this->symbols.at(name); }
+    catch(const std::out_of_range&)
+    { throw SymbolResolutionError(SymbolResolutionError::NOT_FOUND, this->locator + name); }
+}
+
+Symbol& Namespace::getSymbol(const std::string& name)
+{
+    try { return *this->symbols.at(name); }
+    catch(const std::out_of_range&)
+    { throw SymbolResolutionError(SymbolResolutionError::NOT_FOUND, this->locator + name); }
+}
+
+void Namespace::declareSymbol(const std::string& name, std::unique_ptr<Symbol> symbol)
+{
+    if(isDeclared(name))
+        throw SymbolResolutionError(SymbolResolutionError::DUP_DECL, this->symbols[name]->getLocator());
+    symbol->locator = this->locator + name;
+    this->symbols[name] = std::move(symbol);
+}
+
+void Namespace::undeclareSymbol(const std::string& name)
+{
+    if(!isDeclared(name))
+        throw SymbolResolutionError(SymbolResolutionError::NOT_FOUND, this->locator + name);
+    this->symbols.erase(name);
 }
 
 SymbolResolutionError::SymbolResolutionError(ErrorType type, const Locator& locator)

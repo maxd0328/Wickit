@@ -1,6 +1,5 @@
 #include "base/modules/dependencies.h"
 #include "base/xmlparser.h"
-#include "base/modules/xmlrules.h"
 #include "include/exception.h"
 #include <queue>
 #include <list>
