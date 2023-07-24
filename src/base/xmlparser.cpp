@@ -52,19 +52,6 @@ typedef struct
 	std::string tagName;
 } tagoutput_t;
 
-inline static std::string getSource(const URL& url, const std::string& resourceName)
-{
-	if(resourceName.length() == 0)
-		return url.read();
-	
-	try { return url.read(); }
-	catch(const IOError& e)
-	{
-		try { return (url + resourceName).read(); }
-		catch(const IOError&) { throw e; }
-	}
-}
-
 static std::string getLocatorString(__PVEC_ARG)
 {
 	return "[" + __VPARSER->getURL()->toString() + "]:" + std::to_string(__VLINENO) + ":" + std::to_string(__VPOS - __VLINEPOS + 1);
@@ -249,18 +236,13 @@ static tagoutput_t parseTag(const std::vector<std::shared_ptr<TagRule>>& rules, 
 	}
 }
 
-XMLParser::XMLParser(const URL& url, const std::string& resourceName, std::shared_ptr<TagRule> rule)
-: url(std::make_shared<URL>(url)), resourceName(resourceName), rule(rule)
+XMLParser::XMLParser(const URL& url, std::shared_ptr<TagRule> rule)
+: url(std::make_shared<URL>(url)), rule(rule)
 {}
 
 std::shared_ptr<URL> XMLParser::getURL() const
 {
 	return this->url;
-}
-
-std::string XMLParser::getResourceName() const
-{
-	return this->resourceName;
 }
 
 std::shared_ptr<TagRule> XMLParser::getRule() const
@@ -270,7 +252,7 @@ std::shared_ptr<TagRule> XMLParser::getRule() const
 
 std::unique_ptr<XMLObject> XMLParser::build() const
 {
-	xmlparse_t __PVEC = { getSource(*this->url, this->resourceName), 0, 1, 0, this };
+	xmlparse_t __PVEC = { this->url->read(), 0, 1, 0, this };
 	tagoutput_t output = parseTag({ this->rule }, __PVEC);
 	
 	consumeOptional('\0', __PVEC);

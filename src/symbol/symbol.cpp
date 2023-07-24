@@ -30,6 +30,11 @@ Namespace::Namespace(base::moduleid_t moduleID)
 	this->locator = Locator(moduleID);
 }
 
+const std::map<std::string, std::unique_ptr<Symbol>>& Namespace::getSymbols() const
+{
+    return this->symbols;
+}
+
 bool Namespace::isDeclared(const std::string& name) const
 {
     return this->symbols.find(name) != this->symbols.end();
@@ -64,11 +69,31 @@ void Namespace::undeclareSymbol(const std::string& name)
     this->symbols.erase(name);
 }
 
+std::string SymbolResolutionError::getErrorMessage(ErrorType type)
+{
+    switch(type)
+    {
+        case NOT_FOUND:
+            return "Symbol not found";
+        case WRONG_TYPE:
+            return "Wrong symbol type";
+        case DUP_DECL:
+            return "Duplicate declaration of symbol";
+        default:
+            return "<unknown>";
+    }
+}
+
 SymbolResolutionError::SymbolResolutionError(ErrorType type, const Locator& locator)
-: std::runtime_error(locator.toString())
+: std::runtime_error(getErrorMessage(type) + ": " + locator.toString()), locator(locator)
 {
 	this->type = type;
-	this->locator = locator;
+}
+
+SymbolResolutionError::SymbolResolutionError(ErrorType type, const std::string& msg, const Locator& locator)
+: std::runtime_error(msg + ": " + locator.toString()), locator(locator)
+{
+    this->type = type;
 }
 
 SymbolResolutionError::ErrorType SymbolResolutionError::getType() const

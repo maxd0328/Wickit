@@ -13,7 +13,7 @@ const modgenfunc_t DependencyResolver::DEFAULT_MODGENFUNC = DependencyResolver::
 modgenfunc_t DependencyResolver::genModuleBuilderFunction(std::shared_ptr<ModuleBuilder> builder)
 {
 	return [builder](const URL& url) {
-		std::unique_ptr<XMLObject> output = XMLParser(url, "module.xml", builder).build();
+		std::unique_ptr<XMLObject> output = XMLParser(url, builder).build();
 		Module* raw = dynamic_cast<Module*>(output.get());
 		if(!raw)
 			throw CorruptStateException("XML parser output is not a module");

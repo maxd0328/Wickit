@@ -3,12 +3,6 @@
 #include "include/definitions.h"
 #include "base/context.h"
 
-namespace wckt::base
-{
-	/* Forward declaration */
-	class EngineContext;
-};
-
 namespace wckt::sym
 {
 	// Forward declaration, refer to symbol.h //
@@ -34,8 +28,9 @@ namespace wckt::sym
             std::string getPackage(uint32_t index) const;
             uint32_t length() const;
 			
-			const Symbol& locate(const base::EngineContext& context) const;
-			Symbol& locate(base::EngineContext& context);
+			const Symbol& locate(__CTX_CONST context) const;
+			Symbol& locate(__CTX context) const;
+			Symbol& locateOrDeclare(__CTX context) const;
 
             std::string toString() const;
 			
@@ -48,5 +43,7 @@ namespace wckt::sym
 			
 			Locator& operator+=(const Locator& other);
 			Locator operator+(const Locator& other) const;
+
+			Locator withModuleID(base::moduleid_t moduleID) const;
 	};
 }

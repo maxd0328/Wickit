@@ -80,7 +80,7 @@ uint32_t Locator::length() const
 
 namespace
 {
-	template<typename __Tc>
+	template<typename __Tc, auto __F_Action>
 	struct locate_impl_t
 	{
 		/* Define symbol, namespace, and reference symbol types with same const qualifier as context type */
@@ -99,31 +99,45 @@ namespace
 			for(const auto& pckg : pckgs)
 			{
 				// When there's another symbol to navigate to, we ensure the parent symbol is a namespace
-				if(__Tn* n = dynamic_cast<__Tn*>(&symbol))
-				{
-					// Navigate to the next symbol
-					symbol = n->getSymbol(pckg);
-					
-					// If the acquired symbol is a reference symbol to another module, use its locator to jump to its target
-					// (Will recurse to this locate function)
-					if(__Tr* r = dynamic_cast<__Tr*>(&symbol))
-						symbol = r->getTarget().locate(context);
-				}
-				else throw SymbolResolutionError(SymbolResolutionError::NOT_NAMESPACE, symbol->getLocator());
+				__Tn& n = Namespace::assertSymbol(symbol);
+
+				// Perform template action (will usually be nothing, sometimes its to auto-declare)
+				__F_Action(n, pckg);
+
+				// Navigate to the next symbol
+				symbol = n.getSymbol(pckg);
+				
+				// If the acquired symbol is a reference symbol to another module, use its locator to jump to its target
+				// (Will recurse to this locate function)
+				if(__Tr* r = dynamic_cast<__Tr*>(&symbol))
+					symbol = r->getTarget().locate(context);
 			}
 			return symbol;
 		}
 	};
+
+	void declareIfNotDeclared(Namespace& _namespace, const std::string& pckg)
+	{
+		if(!_namespace.isDeclared(pckg))
+			_namespace.declareSymbol(pckg, std::make_unique<Namespace>());
+	}
+
+	void doNothing(const Namespace&, const std::string&) {}
 }
 
-const Symbol& Locator::locate(const base::EngineContext& context) const
+const Symbol& Locator::locate(__CTX_CONST context) const
 {
-	return locate_impl_t<const base::EngineContext>()(this->pckgs, this->moduleID, context);
+	return locate_impl_t<const base::EngineContext, doNothing>()(this->pckgs, this->moduleID, context);
 }
 
-Symbol& Locator::locate(base::EngineContext& context)
+Symbol& Locator::locate(__CTX context) const
 {
-	return locate_impl_t<base::EngineContext>()(this->pckgs, this->moduleID, context);
+	return locate_impl_t<base::EngineContext, doNothing>()(this->pckgs, this->moduleID, context);
+}
+
+Symbol& Locator::locateOrDeclare(__CTX context) const
+{
+	return locate_impl_t<base::EngineContext, declareIfNotDeclared>()(this->pckgs, this->moduleID, context);
 }
 
 std::string Locator::toString() const
@@ -177,4 +191,11 @@ Locator Locator::operator+(const Locator& other) const
 	Locator locator(this->moduleID, this->pckgs);
 	locator += other;
 	return locator;
+}
+
+Locator Locator::withModuleID(base::moduleid_t moduleID) const
+{
+	Locator loc = *this;
+	loc.moduleID = moduleID;
+	return loc;
 }

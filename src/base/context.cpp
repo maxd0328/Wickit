@@ -11,8 +11,8 @@ static inline void ensureNotNpos(moduleid_t id)
 		throw BadArgumentException("NPOS is not a valid module ID");
 }
 
-RuntimeModule::RuntimeModule(std::shared_ptr<Module> source, moduleid_t moduleID)
-: staticSpace(moduleID)
+RuntimeModule::RuntimeModule(EngineContext* context, std::shared_ptr<Module> source, moduleid_t moduleID)
+: context(context), staticSpace(moduleID)
 {
 	this->source = source;
 }
@@ -47,7 +47,27 @@ void RuntimeModule::declarePackages()
 
 void RuntimeModule::declareDependencies()
 {
-	
+	for(const auto& dep : this->source->getDependencies())
+	{
+		moduleid_t moduleID = context->findModuleID(dep.getModuleURL());
+		sym::Symbol& _src = dep.getTarget().withModuleID(moduleID).locate(*this->context);
+		sym::Symbol& _dst = dep.getContainer().withModuleID(moduleID).locateOrDeclare(*this->context);
+
+		sym::Namespace& src = sym::Namespace::assertSymbol(_src);
+		sym::Namespace& dst = sym::Namespace::assertSymbol(_dst);
+
+		for(const auto& entry : src.getSymbols())
+		{
+			dst.declareSymbol(entry.first, std::make_unique<sym::ReferenceSymbol>(entry.second->getLocator()));
+		}
+	}
+}
+
+void RuntimeModule::declareAllInOrder()
+{
+	declarePackages();
+	declareDependencies();
+	// ...
 }
 
 static uint32_t nextContextID = 0;
@@ -68,7 +88,7 @@ uint32_t EngineContext::registerModule(std::shared_ptr<Module> module)
 	
 	moduleid_t moduleID = this->nextModuleID++;
 
-	this->registeredModules[moduleID] = RuntimeModule(module, moduleID);
+	this->registeredModules[moduleID] = RuntimeModule(this, module, moduleID);
 	this->moduleFinder[module->getModulefile()] = moduleID;
 	
 	return moduleID;

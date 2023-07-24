@@ -1,5 +1,13 @@
 #pragma once
 
+#define __CTX_CONST		const wckt::base::EngineContext&
+#define __CTX			wckt::base::EngineContext&
+
+namespace wckt::base
+{
+	class EngineContext;
+}
+
 #include "include/definitions.h"
 #include "base/modules/module.h"
 #include "base/modules/xmlrules.h"
@@ -10,11 +18,12 @@ namespace wckt::base
 	class RuntimeModule
 	{
 		private:
+			EngineContext* context;
 			std::shared_ptr<Module> source;
 			sym::Namespace staticSpace;
 
+			RuntimeModule(EngineContext* context, std::shared_ptr<Module> source, moduleid_t moduleID);
 		public:
-			RuntimeModule(std::shared_ptr<Module> source, moduleid_t moduleID);
 			~RuntimeModule() = default;
 
 			std::shared_ptr<Module> getSource() const;
@@ -23,6 +32,9 @@ namespace wckt::base
 			
 			void declarePackages();
 			void declareDependencies();
+			void declareAllInOrder();
+
+			friend class EngineContext;
 	};
 	
 	#define _MODULEID_FIRST		0

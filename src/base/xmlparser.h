@@ -66,15 +66,13 @@ namespace wckt::base
 	{
 		private:
 			std::shared_ptr<URL> url;
-			std::string resourceName;
 			std::shared_ptr<TagRule> rule;
 			
 		public:
-			XMLParser(const URL& url, const std::string& resourceName, std::shared_ptr<TagRule> rule);
+			XMLParser(const URL& url, std::shared_ptr<TagRule> rule);
 			~XMLParser() = default;
 			
 			std::shared_ptr<URL> getURL() const;
-			std::string getResourceName() const;
 			std::shared_ptr<TagRule> getRule() const;
 			std::unique_ptr<XMLObject> build() const;
 	};
