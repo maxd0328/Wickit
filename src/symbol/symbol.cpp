@@ -11,16 +11,9 @@ Locator Symbol::getLocator() const
     return this->locator;
 }
 
-ReferenceSymbol::ReferenceSymbol(uint32_t module, const Locator& target)
+ReferenceSymbol::ReferenceSymbol(const Locator& target)
 : target(target)
-{
-    this->module = module;
-}
-
-uint32_t ReferenceSymbol::getModule() const
-{
-    return this->module;
-}
+{}
 
 Locator ReferenceSymbol::getTarget() const
 {
@@ -30,6 +23,12 @@ Locator ReferenceSymbol::getTarget() const
 Namespace::Namespace()
 : Symbol()
 {}
+
+Namespace::Namespace(base::moduleid_t moduleID)
+: Symbol()
+{
+	this->locator = Locator(moduleID);
+}
 
 bool Namespace::isDeclared(const std::string& name) const
 {

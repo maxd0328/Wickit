@@ -21,6 +21,9 @@ namespace wckt::sym
 			base::moduleid_t moduleID;
 			
 		public:
+			Locator();
+            Locator(const std::vector<std::string>& pckgs);
+            Locator(const std::string& signature);
 			Locator(base::moduleid_t moduleID);
             Locator(base::moduleid_t moduleID, const std::vector<std::string>& pckgs);
             Locator(base::moduleid_t moduleID, const std::string& signature);
@@ -31,8 +34,8 @@ namespace wckt::sym
             std::string getPackage(uint32_t index) const;
             uint32_t length() const;
 			
-			const Symbol* locate(const base::EngineContext& context) const;
-			Symbol* locate(base::EngineContext& context);
+			const Symbol& locate(const base::EngineContext& context) const;
+			Symbol& locate(base::EngineContext& context);
 
             std::string toString() const;
 			
@@ -42,7 +45,8 @@ namespace wckt::sym
 			bool operator>(const Locator& other) const;
 			bool operator<=(const Locator& other) const;
 			bool operator>=(const Locator& other) const;
+			
+			Locator& operator+=(const Locator& other);
+			Locator operator+(const Locator& other) const;
 	};
-	
-	Locator operator+(const Locator& locator0, const Locator& locator1);
 }

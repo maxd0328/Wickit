@@ -24,14 +24,12 @@ namespace wckt::sym
 	class ReferenceSymbol : public Symbol
 	{
 		private:
-			uint32_t module;
 			Locator target;
 
 		public:
-			ReferenceSymbol(uint32_t module, const Locator& target);
+			ReferenceSymbol(const Locator& target);
 			~ReferenceSymbol() override = default;
 
-			uint32_t getModule() const;
 			Locator getTarget() const;
 	};
 	
@@ -42,6 +40,7 @@ namespace wckt::sym
 			
 		public:
 			Namespace();
+			Namespace(base::moduleid_t moduleID);
 			~Namespace() override = default;
 			
 			bool isDeclared(const std::string& name) const;

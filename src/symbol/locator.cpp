@@ -11,6 +11,18 @@ using namespace wckt::sym;
 // TODO integrate this with tokenizer for consistent identifiers
 static std::regex identifierRegex("[A_Za-z$_][A_Za-z0-9$_]*");
 
+Locator::Locator()
+: Locator(_MODULEID_NPOS)
+{}
+
+Locator::Locator(const std::vector<std::string>& pckgs)
+: Locator(_MODULEID_NPOS, pckgs)
+{}
+
+Locator::Locator(const std::string& signature)
+: Locator(_MODULEID_NPOS, signature)
+{}
+
 Locator::Locator(base::moduleid_t moduleID)
 : moduleID(moduleID)
 {}
@@ -66,29 +78,52 @@ uint32_t Locator::length() const
     return this->pckgs.size();
 }
 
-template<typename __Tc, typename __Ts, typename __Tn>
-static __Ts* locateImpl(const std::vector<std::string>& pckgs, base::moduleid_t moduleID, __Tc& context)
-{ // KEEP WORKING ON THIS
-	__Ts* symbol = context.getDeclarationSpace();
-	for(const auto& pckg : pckgs)
+namespace
+{
+	template<typename __Tc>
+	struct locate_impl_t
 	{
-		if(__Tn* n = dynamic_cast<__Tn*>(symbol))
+		/* Define symbol, namespace, and reference symbol types with same const qualifier as context type */
+		using __Ts = typename std::conditional<std::is_const<__Tc>::value, const Symbol, Symbol>::type;
+		using __Tn = typename std::conditional<std::is_const<__Tc>::value, const Namespace, Namespace>::type;
+		using __Tr = typename std::conditional<std::is_const<__Tc>::value, const ReferenceSymbol, ReferenceSymbol>::type;
+		
+		/* Implementation */
+		__Ts& operator()(const std::vector<std::string>& pckgs, base::moduleid_t moduleID, __Tc& context)
 		{
-			symbol = n->getSymbol(pckg);
+			// Ensure the module ID points to an actual module
+			if(moduleID == _MODULEID_NPOS)
+				throw CorruptStateException("No module ID is assigned to this locator");
+			// Get the static space of that module
+			__Ts& symbol = context.getModule(moduleID).getStaticSpace();
+			for(const auto& pckg : pckgs)
+			{
+				// When there's another symbol to navigate to, we ensure the parent symbol is a namespace
+				if(__Tn* n = dynamic_cast<__Tn*>(&symbol))
+				{
+					// Navigate to the next symbol
+					symbol = n->getSymbol(pckg);
+					
+					// If the acquired symbol is a reference symbol to another module, use its locator to jump to its target
+					// (Will recurse to this locate function)
+					if(__Tr* r = dynamic_cast<__Tr*>(&symbol))
+						symbol = r->getTarget().locate(context);
+				}
+				else throw SymbolResolutionError(SymbolResolutionError::NOT_NAMESPACE, symbol->getLocator());
+			}
+			return symbol;
 		}
-		else throw SymbolResolutionError(SymbolResolutionError::NOT_NAMESPACE, symbol->getLocator());
-	}
-	return symbol;
+	};
 }
 
-const Symbol* Locator::locate(const base::EngineContext& context) const
+const Symbol& Locator::locate(const base::EngineContext& context) const
 {
-	return locateImpl<const base::EngineContext, const Symbol, const Namespace>(this->pckgs, context);
+	return locate_impl_t<const base::EngineContext>()(this->pckgs, this->moduleID, context);
 }
 
-Symbol* Locator::locate(base::EngineContext& context)
+Symbol& Locator::locate(base::EngineContext& context)
 {
-	return locateImpl<base::EngineContext, Symbol, Namespace>(this->pckgs, context);
+	return locate_impl_t<base::EngineContext>()(this->pckgs, this->moduleID, context);
 }
 
 std::string Locator::toString() const
@@ -131,10 +166,15 @@ bool Locator::operator>=(const Locator& other) const { return !(*this < other); 
 bool Locator::operator<=(const Locator& other) const { return *this == other || *this < other; }
 bool Locator::operator>(const Locator& other) const { return !(*this == other) && !(*this < other); }
 
-Locator wckt::sym::operator+(const Locator& locator0, const Locator& locator1)
+Locator& Locator::operator+=(const Locator& other)
 {
-	std::vector<std::string> pckgs = locator0.getPackages();
-	std::vector<std::string> pckgsToAdd = locator1.getPackages();
-	pckgs.insert(pckgs.end(), pckgsToAdd.begin(), pckgsToAdd.end());
-	return Locator(pckgs);
+	this->pckgs.insert(this->pckgs.end(), other.pckgs.begin(), other.pckgs.end());
+	return *this;
+}
+
+Locator Locator::operator+(const Locator& other) const
+{
+	Locator locator(this->moduleID, this->pckgs);
+	locator += other;
+	return locator;
 }

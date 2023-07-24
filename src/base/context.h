@@ -14,15 +14,20 @@ namespace wckt::base
 			sym::Namespace staticSpace;
 
 		public:
-			RuntimeModule(std::shared_ptr<Module> source);
+			RuntimeModule(std::shared_ptr<Module> source, moduleid_t moduleID);
 			~RuntimeModule() = default;
 
 			std::shared_ptr<Module> getSource() const;
 			const sym::Namespace& getStaticSpace() const;
 			sym::Namespace& getStaticSpace();
+			
+			void declarePackages();
+			void declareDependencies();
 	};
-
-	#define FIRST_MODULEID	0
+	
+	#define _MODULEID_FIRST		0
+	#define _MODULEID_NPOS		( (wckt::base::moduleid_t) -1 )
+	
 	typedef uint32_t moduleid_t;
 
     class EngineContext
@@ -40,7 +45,7 @@ namespace wckt::base
 			
 			uint32_t getContextID() const;
 
-			void registerModule(std::shared_ptr<Module> module);
+			moduleid_t registerModule(std::shared_ptr<Module> module);
 			void unregisterModule(moduleid_t moduleID);
 			void unregisterModule(const URL& url);
 			
