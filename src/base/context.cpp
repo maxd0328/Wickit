@@ -5,10 +5,10 @@
 using namespace wckt;
 using namespace wckt::base;
 
-static inline void ensureNotNpos(moduleid_t id)
+static inline void ensureNotNpos(ARG_moduleid_t id)
 {
 	if(id == _MODULEID_NPOS)
-		throw BadArgumentException("NPOS is not a valid module ID");
+		throw BadArgumentError("NPOS is not a valid module ID");
 }
 
 RuntimeModule::RuntimeModule(EngineContext* context, std::shared_ptr<Module> source, moduleid_t moduleID)
@@ -84,7 +84,7 @@ uint32_t EngineContext::getContextID() const
 uint32_t EngineContext::registerModule(std::shared_ptr<Module> module)
 {
 	if(isModuleRegistered(module->getModulefile()))
-		throw BadArgumentException("Module is already registered");
+		throw BadStateError("Module is already registered");
 	
 	moduleid_t moduleID = this->nextModuleID++;
 
@@ -94,7 +94,7 @@ uint32_t EngineContext::registerModule(std::shared_ptr<Module> module)
 	return moduleID;
 }
 
-void EngineContext::unregisterModule(moduleid_t moduleID)
+void EngineContext::unregisterModule(ARG_moduleid_t moduleID)
 {
 	RuntimeModule& module = getModule(moduleID);
 	this->registeredModules.erase(moduleID);
@@ -108,7 +108,7 @@ void EngineContext::unregisterModule(const URL& url)
 	this->moduleFinder.erase(url);
 }
 
-bool EngineContext::isModuleRegistered(moduleid_t moduleID) const
+bool EngineContext::isModuleRegistered(ARG_moduleid_t moduleID) const
 {
 	ensureNotNpos(moduleID);
 	return this->registeredModules.find(moduleID) != this->registeredModules.end();
@@ -119,14 +119,14 @@ bool EngineContext::isModuleRegistered(const URL& url) const
 	return this->moduleFinder.find(url) != this->moduleFinder.end();
 }
 
-moduleid_t EngineContext::findModuleID(const URL& url) const
+RET_moduleid_t EngineContext::findModuleID(const URL& url) const
 {
 	try { return this->moduleFinder.at(url); }
 	catch(const std::out_of_range&)
 	{ throw ElementNotFoundError("URL does not match any registered modules"); }
 }
 
-const RuntimeModule& EngineContext::getModule(moduleid_t moduleID) const
+const RuntimeModule& EngineContext::getModule(ARG_moduleid_t moduleID) const
 {
 	ensureNotNpos(moduleID);
 	try { return this->registeredModules.at(moduleID); }
@@ -139,7 +139,7 @@ const RuntimeModule& EngineContext::getModule(const URL& url) const
 	return getModule(findModuleID(url));
 }
 
-RuntimeModule& EngineContext::getModule(moduleid_t moduleID)
+RuntimeModule& EngineContext::getModule(ARG_moduleid_t moduleID)
 {
 	ensureNotNpos(moduleID);
 	try { return this->registeredModules.at(moduleID); }

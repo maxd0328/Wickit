@@ -51,7 +51,7 @@ namespace
 			return sourcepath;
 		}
 		
-		static inline std::filesystem::path canonical(const std::filesystem::path& path)
+		static inline std::filesystem::path canonical(const std::filesystem::path& path, std::shared_ptr<URL> parent)
 		{
 			try
 			{
@@ -59,7 +59,7 @@ namespace
 			}
 			catch(const std::filesystem::filesystem_error& e)
 			{
-				throw IOError(std::string("Could not compute canonical path: ") + e.what());
+				throw IOError(parent == nullptr ? URL() : *parent, std::string("Could not compute canonical path: ") + e.what());
 			}
 		}
 		
@@ -68,7 +68,7 @@ namespace
 			auto sourcepath = computePath(source, parent);
 			auto stream = std::make_unique<std::ifstream>(sourcepath, std::ios::in | (textMode ? 0 : std::ios::binary));
 			if(!stream->is_open())
-				throw IOError("Failed to open file: " + sourcepath.string());
+				throw IOError(parent == nullptr ? URL() : *parent, "Failed to open file: " + sourcepath.string());
 			return stream;
 		}
 
@@ -77,21 +77,21 @@ namespace
 			auto sourcepath = computePath(source, parent);
 			auto stream = std::make_unique<std::ofstream>(sourcepath, std::ios::out | (textMode ? 0 : std::ios::binary));
 			if(!stream->is_open())
-				throw IOError("Failed to open file: " + sourcepath.string());
+				throw IOError(parent == nullptr ? URL() : *parent, "Failed to open file: " + sourcepath.string());
 			return stream;
 		}
 
 		bool equals(const std::string& s0, std::shared_ptr<URL> p0, const std::string& s1, std::shared_ptr<URL> p1) const override
 		{
 			auto path0 = computePath(s0, p0), path1 = computePath(s1, p1);
-			auto norm0 = canonical(path0), norm1 = canonical(path1);
+			auto norm0 = canonical(path0, p0), norm1 = canonical(path1, p1);
 			return norm0 == norm1;
 		}
 		
 		std::size_t hash(const std::string& source, std::shared_ptr<URL> parent) const override
 		{
 			auto path = computePath(source, parent);
-			auto norm = canonical(path);
+			auto norm = canonical(path, parent);
 			return 65535 ^ (std::hash<std::string>()(norm.string()) << 2);
 		}
 		
@@ -110,6 +110,13 @@ std::map<std::string, std::shared_ptr<URLProtocol>> URL::knownProtocols = {
 	{"str", URL::STRING_PROTOCOL},
 	{"file", URL::FILE_PROTOCOL}
 };
+
+URL::URL()
+{
+	this->protocol = nullptr;
+	this->source = "";
+	this->parent = nullptr;
+}
 
 URL::URL(std::shared_ptr<URLProtocol> protocol, const std::string& source, std::shared_ptr<URL> parent)
 {
@@ -148,12 +155,17 @@ URL::URL(const std::string& value, std::shared_ptr<URL> parent)
         }
     }
 
-    throw IOError("No such protocol: " + protocol);
+    throw FormatError(parent == nullptr ? URL() : *parent, "No such protocol: " + protocol);
 
     assignment:
     this->source = source;
     this->protocol = protocolObj;
 	this->parent = parent;
+}
+
+bool URL::isVoid() const
+{
+	return this->protocol == nullptr;
 }
 
 std::shared_ptr<URLProtocol> URL::getProtocol() const
@@ -178,6 +190,8 @@ std::string URL::toString() const
 
 std::unique_ptr<std::istream> URL::toInputStream(bool textMode) const
 {
+	if(this->protocol == nullptr)
+		throw BadStateError("Cannot read a void URL");
     return this->protocol->istream(this->source, this->parent, textMode);
 }
 
@@ -190,6 +204,8 @@ std::string URL::read(bool textMode) const
 
 std::unique_ptr<std::ostream> URL::toOutputStream(bool textMode) const
 {
+	if(this->protocol == nullptr)
+		throw BadStateError("Cannot write to a void URL");
 	return this->protocol->ostream(this->source, this->parent, textMode);
 }
 
@@ -197,6 +213,8 @@ bool URL::operator==(const URL& other) const
 {
 	if(this->protocol != other.protocol)
 		return false;
+	if(this->protocol == nullptr)
+		return true;
 	return this->protocol->equals(this->source, this->parent, other.source, other.parent);
 }
 
@@ -214,7 +232,10 @@ URL URL::operator+(const std::string& elem) const
 
 URL& URL::operator+=(const std::string& elem)
 {
+	if(this->protocol == nullptr)
+		return *this;
 	this->source = this->protocol->append(this->source, elem);
+	return *this;
 }
 
 std::string URL::getProtocolName(std::shared_ptr<URLProtocol> protocol)
@@ -229,5 +250,7 @@ std::string URL::getProtocolName(std::shared_ptr<URLProtocol> protocol)
 
 std::size_t __impl_URLHasher__::operator()(const URL& elem) const
 {
+	if(elem.getProtocol() == nullptr)
+		return 3947; // Random hash for void URLs
 	return elem.getProtocol()->hash(elem.getSource(), elem.getParent());
 }

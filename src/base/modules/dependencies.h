@@ -4,6 +4,7 @@
 #include "base/url.h"
 #include "base/modules/module.h"
 #include "base/modules/xmlrules.h"
+#include "include/exception.h"
 
 namespace wckt::base
 {
@@ -30,7 +31,7 @@ namespace wckt::base
 			std::vector<std::shared_ptr<Module>> computeTopologicalOrder() const;
 	};
 	
-	struct CyclicDependencyError : public std::runtime_error
+	struct CyclicDependencyError : public UserError
 	{
 		CyclicDependencyError();
 		~CyclicDependencyError() = default;

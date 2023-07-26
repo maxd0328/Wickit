@@ -1,41 +1,52 @@
 #pragma once
 
 #include "include/definitions.h"
+#include "base/url.h"
 
-struct AssertionError : public std::runtime_error
+class APIError : public std::runtime_error
 {
-    AssertionError(const std::string& message);
-    ~AssertionError() = default;
+	public:
+		APIError(const std::string& message);
+		~APIError() override = default;
 };
 
-struct UnsupportedOperationError : public std::runtime_error
+class dUserError : public std::runtime_error
 {
-    UnsupportedOperationError(const std::string& message);
-    ~UnsupportedOperationError() = default;
+	private:
+		wckt::base::URL traceURL;
+		moduleid_t moduleID;
+	
+	public:
+		dUserError(const wckt::base::URL& traceURL, const std::string& message);
+		dUserError(ARG_moduleid_t moduleID, const std::string& message);
+		~dUserError() override = default;
+		
+		wckt::base::URL getTraceURL() const;
 };
 
-struct ElementNotFoundError : public std::runtime_error
-{
-	ElementNotFoundError(const std::string& message);
-	~ElementNotFoundError() = default;
-};
+#define _MAKE_API_ERROR(_Name)	struct _Name : public APIError					\
+								{												\
+									inline _Name(const std::string& message)	\
+									: APIError(message) {}						\
+									~_Name() override = default;				\
+								};
+#define _MAKE_USER_ERROR(_Name)	struct _Name : public dUserError					\
+								{													\
+									inline _Name(const wckt::base::URL& traceURL,	\
+										const std::string& message)					\
+									: dUserError(traceURL, message) {}				\
+									~_Name() override = default;					\
+								};
 
-struct BadArgumentException : public std::runtime_error
-{
-    BadArgumentException(const std::string& message);
-    ~BadArgumentException() = default;
-};
+_MAKE_API_ERROR(APIAssertionError)
+_MAKE_USER_ERROR(UserAssertionError)
+void assert(bool condition, const std::string& message = "Assertion failed", bool user = false, const wckt::base::URL& traceURL = wckt::base::URL());
 
-struct CorruptStateException : public std::runtime_error
-{
-	CorruptStateException(const std::string& message);
-	~CorruptStateException() = default;
-};
+_MAKE_USER_ERROR(IOError)
+_MAKE_USER_ERROR(FormatError)
 
-struct IOError : public std::runtime_error
-{
-	IOError(const std::string& message);
-	~IOError() = default;
-};
-
-void assert(bool condition, const std::string& message = "Assertion failed");
+_MAKE_API_ERROR(UnsupportedOperationError)
+_MAKE_API_ERROR(ElementNotFoundError)
+_MAKE_API_ERROR(BadArgumentError)
+_MAKE_API_ERROR(BadStateError)
+_MAKE_API_ERROR(CorruptStateError)

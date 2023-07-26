@@ -36,11 +36,6 @@ namespace wckt::base
 
 			friend class EngineContext;
 	};
-	
-	#define _MODULEID_FIRST		0
-	#define _MODULEID_NPOS		( (wckt::base::moduleid_t) -1 )
-	
-	typedef uint32_t moduleid_t;
 
     class EngineContext
     {
@@ -57,16 +52,16 @@ namespace wckt::base
 			
 			uint32_t getContextID() const;
 
-			moduleid_t registerModule(std::shared_ptr<Module> module);
-			void unregisterModule(moduleid_t moduleID);
+			RET_moduleid_t registerModule(std::shared_ptr<Module> module);
+			void unregisterModule(ARG_moduleid_t moduleID);
 			void unregisterModule(const URL& url);
 			
-			bool isModuleRegistered(moduleid_t moduleID) const;
+			bool isModuleRegistered(ARG_moduleid_t moduleID) const;
 			bool isModuleRegistered(const URL& url) const;
-			moduleid_t findModuleID(const URL& url) const;
-			const RuntimeModule& getModule(moduleid_t moduleID) const;
+			RET_moduleid_t findModuleID(const URL& url) const;
+			const RuntimeModule& getModule(ARG_moduleid_t moduleID) const;
 			const RuntimeModule& getModule(const URL& url) const;
-			RuntimeModule& getModule(moduleid_t moduleID);
+			RuntimeModule& getModule(ARG_moduleid_t moduleID);
 			RuntimeModule& getModule(const URL& url);
     };
 }

@@ -42,5 +42,5 @@ Visibility Visibility::fromString(const std::string& str)
 		if(v.toString() == str)
 			return v;
 	}
-	throw BadArgumentException("\'" + str + "\' is not a visibility modifier");
+	throw BadArgumentError("\'" + str + "\' is not a visibility modifier");
 }

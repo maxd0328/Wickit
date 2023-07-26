@@ -1,14 +1,13 @@
 #pragma once
 
 #include "include/definitions.h"
-#include "base/context.h"
 
 namespace wckt::sym
 {
 	// Forward declaration, refer to locator.h //
 	class Locator;
 
-		class SymbolResolutionError : public std::runtime_error
+	class SymbolResolutionError : public UserError
 	{
 		public:
 			enum ErrorType
@@ -27,7 +26,7 @@ namespace wckt::sym
 		public:
 			SymbolResolutionError(ErrorType type, const Locator& locator);
 			SymbolResolutionError(ErrorType type, const std::string& msg, const Locator& locator);
-			~SymbolResolutionError() = default;
+			~SymbolResolutionError() override = default;
 			
 			ErrorType getType() const;
 			Locator getLocator() const;
@@ -83,7 +82,7 @@ namespace wckt::sym
 			
 		public:
 			Namespace();
-			Namespace(base::moduleid_t moduleID);
+			Namespace(ARG_moduleid_t moduleID);
 			~Namespace() override = default;
 			
 			const std::map<std::string, std::unique_ptr<Symbol>>& getSymbols() const;

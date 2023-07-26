@@ -2,6 +2,7 @@
 
 #include "include/definitions.h"
 #include "base/url.h"
+#include "include/exception.h"
 
 #define _REQ(_Name)				{ _Name, true, "" }
 #define _OPT(_Name, _Default)	{ _Name, false, _Default }
@@ -76,4 +77,6 @@ namespace wckt::base
 			std::shared_ptr<TagRule> getRule() const;
 			std::unique_ptr<XMLObject> build() const;
 	};
+	
+	_MAKE_USER_ERROR(XMLParseError)
 }

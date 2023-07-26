@@ -33,10 +33,12 @@ namespace wckt::base
 			std::shared_ptr<URL> parent;
         
         public:
+			URL();
             URL(std::shared_ptr<URLProtocol> protocol, const std::string& source, std::shared_ptr<URL> parent = nullptr);
             URL(const std::string& value, std::shared_ptr<URL> parent = nullptr);
             ~URL() = default;
-
+			
+			bool isVoid() const;
             std::shared_ptr<URLProtocol> getProtocol() const;
             std::string getSource() const;
 			std::shared_ptr<URL> getParent() const;

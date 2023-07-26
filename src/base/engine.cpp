@@ -1,4 +1,5 @@
 #include "base/engine.h"
+#include "include/exception.h"
 
 using namespace wckt::base;
 
@@ -8,13 +9,13 @@ std::map<uint32_t, std::shared_ptr<EngineContext>> Engine::contexts;
 static inline void ensureInstance(const std::map<uint32_t, std::unique_ptr<Engine>>& instances, uint32_t contextID)
 {
 	if(instances.find(contextID) == instances.end())
-		throw std::runtime_error("No suitable instance found");
+		throw ElementNotFoundError("No suitable instance found");
 }
 
 void Engine::startInstance(std::shared_ptr<EngineContext> context)
 {
 	if(instances.find(context->getContextID()) != instances.end())
-		throw std::runtime_error("Instance already running with this context");
+		throw BadStateError("Instance already running with this context");
 	
 	auto instance = std::unique_ptr<Engine>(new Engine(*context));
 	
@@ -57,7 +58,7 @@ void Engine::terminateAllInstances()
 const EngineContext& Engine::getContext(uint32_t contextID)
 {
 	if(contexts.find(contextID) == contexts.end())
-		throw std::runtime_error("No such context found");
+		throw ElementNotFoundError("No such context found");
 	return *contexts[contextID];
 }
 

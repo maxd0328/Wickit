@@ -1,5 +1,4 @@
 #include "base/xmlparser.h"
-#include "include/exception.h"
 #include "include/strutil.h"
 
 using namespace wckt::base;
@@ -230,7 +229,7 @@ static tagoutput_t parseTag(const std::vector<std::shared_ptr<TagRule>>& rules, 
 	{
 		return { rule->apply(*__VPARSER, arguments, children), rule->getName() };
 	}
-	catch(const std::exception& e)
+	catch(const UserError& e)
 	{
 		throw parse_error(e.what(), __PVEC);
 	}
@@ -252,11 +251,18 @@ std::shared_ptr<TagRule> XMLParser::getRule() const
 
 std::unique_ptr<XMLObject> XMLParser::build() const
 {
-	xmlparse_t __PVEC = { this->url->read(), 0, 1, 0, this };
-	tagoutput_t output = parseTag({ this->rule }, __PVEC);
-	
-	consumeOptional('\0', __PVEC);
-	if(__VCHAR != '\0')
-		throw parse_error(std::string(1, __VCHAR), "end of stream", __PVEC);
-	return std::move(output.object);
+	try
+	{
+		xmlparse_t __PVEC = { this->url->read(), 0, 1, 0, this };
+		tagoutput_t output = parseTag({ this->rule }, __PVEC);
+		
+		consumeOptional('\0', __PVEC);
+		if(__VCHAR != '\0')
+			throw parse_error(std::string(1, __VCHAR), "end of stream", __PVEC);
+		return std::move(output.object);
+	}
+	catch(const parse_error& e)
+	{
+		throw XMLParseError(*this->url, std::string("Error while parsing XML: ") + e.what());
+	}
 }

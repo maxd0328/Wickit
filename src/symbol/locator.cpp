@@ -23,11 +23,11 @@ Locator::Locator(const std::string& signature)
 : Locator(_MODULEID_NPOS, signature)
 {}
 
-Locator::Locator(base::moduleid_t moduleID)
+Locator::Locator(ARG_moduleid_t moduleID)
 : moduleID(moduleID)
 {}
 
-Locator::Locator(base::moduleid_t moduleID, const std::vector<std::string>& pckgs)
+Locator::Locator(ARG_moduleid_t moduleID, const std::vector<std::string>& pckgs)
 : moduleID(moduleID)
 {
     for(const auto& pckg : pckgs)
@@ -35,7 +35,7 @@ Locator::Locator(base::moduleid_t moduleID, const std::vector<std::string>& pckg
     this->pckgs = pckgs;
 }
 
-Locator::Locator(base::moduleid_t moduleID, const std::string& signature)
+Locator::Locator(ARG_moduleid_t moduleID, const std::string& signature)
 : moduleID(moduleID)
 {
     std::string cur = signature;
@@ -58,7 +58,7 @@ Locator::Locator(base::moduleid_t moduleID, const std::string& signature)
     this->pckgs.push_back(cur);
 }
 
-base::moduleid_t Locator::getModuleID() const
+RET_moduleid_t Locator::getModuleID() const
 {
 	return this->moduleID;
 }
@@ -89,11 +89,8 @@ namespace
 		using __Tr = typename std::conditional<std::is_const<__Tc>::value, const ReferenceSymbol, ReferenceSymbol>::type;
 		
 		/* Implementation */
-		__Ts& operator()(const std::vector<std::string>& pckgs, base::moduleid_t moduleID, __Tc& context)
+		__Ts& operator()(const std::vector<std::string>& pckgs, ARG_moduleid_t moduleID, __Tc& context)
 		{
-			// Ensure the module ID points to an actual module
-			if(moduleID == _MODULEID_NPOS)
-				throw CorruptStateException("No module ID is assigned to this locator");
 			// Get the static space of that module
 			__Ts& symbol = context.getModule(moduleID).getStaticSpace();
 			for(const auto& pckg : pckgs)
@@ -193,7 +190,7 @@ Locator Locator::operator+(const Locator& other) const
 	return locator;
 }
 
-Locator Locator::withModuleID(base::moduleid_t moduleID) const
+Locator Locator::withModuleID(ARG_moduleid_t moduleID) const
 {
 	Locator loc = *this;
 	loc.moduleID = moduleID;

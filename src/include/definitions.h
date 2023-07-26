@@ -39,3 +39,12 @@ typedef uint32_t    enum_t;
 #define _VECARG(__Type, __Name)			const std::vector<__Type>& __Name = std::vector<__Type>()
 #define _MAPARG(__Key, __Val, __Name)	const std::map<__Key, __Val>& __Name = std::map<__Key, __Val>()
 #define _INIT(...)						{ __VA_ARGS__ }
+
+// Module IDs
+#define _MODULEID_FIRST		0
+#define _MODULEID_NPOS		( (moduleid_t) -1 )
+
+typedef uint32_t moduleid_t;
+
+typedef moduleid_t ARG_moduleid_t;
+typedef moduleid_t RET_moduleid_t;

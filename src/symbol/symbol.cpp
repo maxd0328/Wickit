@@ -24,7 +24,7 @@ Namespace::Namespace()
 : Symbol()
 {}
 
-Namespace::Namespace(base::moduleid_t moduleID)
+Namespace::Namespace(ARG_moduleid_t moduleID)
 : Symbol()
 {
 	this->locator = Locator(moduleID);
@@ -85,13 +85,13 @@ std::string SymbolResolutionError::getErrorMessage(ErrorType type)
 }
 
 SymbolResolutionError::SymbolResolutionError(ErrorType type, const Locator& locator)
-: std::runtime_error(getErrorMessage(type) + ": " + locator.toString()), locator(locator)
+: UserError(locator.getModuleID(), getErrorMessage(type) + ": " + locator.toString()), locator(locator)
 {
 	this->type = type;
 }
 
 SymbolResolutionError::SymbolResolutionError(ErrorType type, const std::string& msg, const Locator& locator)
-: std::runtime_error(msg + ": " + locator.toString()), locator(locator)
+: UserError(locator.getModuleID(), msg + ": " + locator.toString()), locator(locator)
 {
     this->type = type;
 }

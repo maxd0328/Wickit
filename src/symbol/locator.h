@@ -12,18 +12,18 @@ namespace wckt::sym
 	{
 		private:
 			std::vector<std::string> pckgs;
-			base::moduleid_t moduleID;
+			moduleid_t moduleID;
 			
 		public:
 			Locator();
             Locator(const std::vector<std::string>& pckgs);
             Locator(const std::string& signature);
-			Locator(base::moduleid_t moduleID);
-            Locator(base::moduleid_t moduleID, const std::vector<std::string>& pckgs);
-            Locator(base::moduleid_t moduleID, const std::string& signature);
+			Locator(ARG_moduleid_t moduleID);
+            Locator(ARG_moduleid_t moduleID, const std::vector<std::string>& pckgs);
+            Locator(ARG_moduleid_t moduleID, const std::string& signature);
             ~Locator() = default;
 
-			base::moduleid_t getModuleID() const;
+			RET_moduleid_t getModuleID() const;
             std::vector<std::string> getPackages() const;
             std::string getPackage(uint32_t index) const;
             uint32_t length() const;
@@ -44,6 +44,6 @@ namespace wckt::sym
 			Locator& operator+=(const Locator& other);
 			Locator operator+(const Locator& other) const;
 
-			Locator withModuleID(base::moduleid_t moduleID) const;
+			Locator withModuleID(ARG_moduleid_t moduleID) const;
 	};
 }

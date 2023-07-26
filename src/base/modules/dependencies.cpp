@@ -16,7 +16,7 @@ modgenfunc_t DependencyResolver::genModuleBuilderFunction(std::shared_ptr<Module
 		std::unique_ptr<XMLObject> output = XMLParser(url, builder).build();
 		Module* raw = dynamic_cast<Module*>(output.get());
 		if(!raw)
-			throw CorruptStateException("XML parser output is not a module");
+			throw CorruptStateError("XML parser output is not a module");
 		output.release();
 		return std::shared_ptr<Module>(raw);
 	};
@@ -121,5 +121,5 @@ std::vector<std::shared_ptr<Module>> DependencyResolver::computeTopologicalOrder
 }
 
 CyclicDependencyError::CyclicDependencyError()
-: std::runtime_error("Module dependency tree contains cyclic dependencies")
+: UserError(URL(), "Module dependency tree contains cyclic dependencies")
 {}

@@ -1,33 +1,23 @@
 #include "include/exception.h"
 
-AssertionError::AssertionError(const std::string& message)
+APIError::APIError(const std::string& message)
 : std::runtime_error(message)
 {}
 
-UnsupportedOperationError::UnsupportedOperationError(const std::string& message)
-: std::runtime_error(message)
+UserError::UserError(const wckt::base::URL& traceURL, const std::string& message)
+: std::runtime_error(message), traceURL(traceURL), moduleID(_MODULEID_NPOS)
 {}
 
-ElementNotFoundError::ElementNotFoundError(const std::string& message)
-: std::runtime_error(message)
+UserError::UserError(ARG_moduleid_t moduleID, const std::string& message)
+: std::runtime_error(message), traceURL(wckt::base::URL()), moduleID(moduleID)
 {}
 
-BadArgumentException::BadArgumentException(const std::string& message)
-: std::runtime_error(message)
-{}
-
-CorruptStateException::CorruptStateException(const std::string& message)
-: std::runtime_error(message)
-{}
-
-IOError::IOError(const std::string& message)
-: std::runtime_error(message)
-{}
-
-void assert(bool condition, const std::string& message)
+void assert(bool condition, const std::string& message, bool user, const wckt::base::URL& traceURL)
 {
     if(!condition)
     {
-        throw AssertionError(message);
+		if(user)
+			throw UserAssertionError(traceURL, message);
+		else throw APIAssertionError(message);
     }
 }

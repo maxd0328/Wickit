@@ -11,7 +11,7 @@ using namespace wckt::base::modxml;
 MODXML_IMPLRULE(DependencyTag, "dependency", _INIT(_REQ("src"), _OPT("bundle", "false"), _OPT("pckg", ""), _OPT("into", "")), _INIT())
 _APPLY_TAG_RULE(DependencyTag::)
 {
-	assert(arguments["bundle"] == "true" || arguments["bundle"] == "false", "bundle must be a boolean value");
+	assert(arguments["bundle"] == "true" || arguments["bundle"] == "false", "bundle must be a boolean value", true, *parser.getURL());
 	return std::make_unique<ModuleDependency>(URL(arguments["src"], parser.getURL()), sym::Locator(arguments["pckg"]),
 		sym::Locator(arguments["into"]), arguments["bundle"] == "true");
 }
@@ -121,8 +121,8 @@ ModuleBuilder::ModuleBuilder(const std::vector<std::shared_ptr<TagRule>>& compon
 _APPLY_TAG_RULE(ModuleBuilder::)
 {
 	for(const auto& childList : children)
-		assert(childList.second.size() <= 1, "Each tag under module may only be declared once");
-		
+		assert(childList.second.size() <= 1, "Each tag under module may only be declared once", true, *parser.getURL());
+	
 	std::vector<ModuleDependency> dependencies;
 	Package rootPackage;
 	std::map<std::string, std::unique_ptr<ModuleComponent>> components;
@@ -136,7 +136,7 @@ _APPLY_TAG_RULE(ModuleBuilder::)
 		else
 		{
 			ModuleComponent* raw = dynamic_cast<ModuleComponent*>(childList.second[0].release());
-			assert(raw != nullptr, "[Internal assertion] XMLObject returned by component rules must be an instance of ModuleComponent");
+			assert(raw != nullptr, "XMLObject returned by component rules must be an instance of ModuleComponent");
 			components[childList.first] = std::unique_ptr<ModuleComponent>(raw);
 		}
 	}
