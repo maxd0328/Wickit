@@ -2,8 +2,7 @@
 
 // Include useful stdlib
 #include <cstdint>
-#include <cstdio>
-#include <cstdlib>
+#include <iostream>
 #include <vector>
 #include <string>
 #include <fstream>

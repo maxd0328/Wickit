@@ -20,43 +20,168 @@ std::string StandardError::what() const
 	return this->message;
 }
 
-ErrorWrapper::ErrorWrapper(PTR_ErrorContextLayer top)
+ErrorPackage::ErrorPackage(const std::vector<PTR_ErrorContextLayer>& errors)
+: ErrorContextLayer(nullptr), errors(errors)
+{}
+
+const std::vector<PTR_ErrorContextLayer>& ErrorPackage::getErrors() const
+{
+	return this->errors;
+}
+
+std::string ErrorPackage::what() const
+{
+	bool first = true;
+	std::stringstream ss;
+	for(const auto& err : this->errors)
+	{
+		if(first)
+		{
+			ss << "! " << err->what() << "\n";
+			first = false;
+		}
+		else
+			ss << "\n! " << err->what() << "\n";
+	}
+	return ss.str();
+}
+
+WickitError::WickitError(PTR_ErrorContextLayer top)
 : std::exception(), top(std::move(top))
 {}
 
-const ErrorContextLayer& ErrorWrapper::getTop() const
+const ErrorContextLayer& WickitError::getTop() const
 {
 	return *this->top;
 }
 
-PTR_ErrorContextLayer ErrorWrapper::releaseTop()
+PTR_ErrorContextLayer WickitError::releaseTop()
 {
 	return std::move(this->top);
 }
 
-const char* ErrorWrapper::what() const noexcept
+const char* WickitError::what() const noexcept
 {
 	return this->top->what().c_str();
 }
+
+ErrorSentinel::no_except::no_except(): APIError("")
+{}
 
 ErrorSentinel::errctx_fn_t ErrorSentinel::NO_CONTEXT_FN = [](PTR_ErrorContextLayer error) {
 	return error;
 };
 
 ErrorSentinel::ErrorSentinel(behavior_t behavior, const errctx_fn_t& contextFunction)
-: behavior(behavior), contextFunction(contextFunction)
+: prev(nullptr), behavior(behavior), contextFunction(contextFunction)
 {}
 
-void ErrorSentinel::raise(PTR_ErrorContextLayer error) // (PTR_ErrorContextLayer = std::unique_ptr<ErrorContextLayer>)
+ErrorSentinel::ErrorSentinel(ErrorSentinel* prev, behavior_t behavior, const errctx_fn_t& contextFunction)
+: prev(prev), behavior(behavior), contextFunction(contextFunction)
+{}
+
+ErrorSentinel::~ErrorSentinel()
 {
-	switch(this->behavior)
+	this->forward();
+}
+
+ErrorSentinel* ErrorSentinel::getPrev() const
+{
+	return this->prev;
+}
+
+ErrorSentinel::behavior_t ErrorSentinel::getBehavior() const
+{
+	return this->behavior;
+}
+
+const std::vector<PTR_ErrorContextLayer>& ErrorSentinel::getErrors() const
+{
+	return this->errors;
+}
+
+ErrorSentinel::errctx_fn_t ErrorSentinel::getContextFunction() const
+{
+	return this->contextFunction;
+}
+
+void ErrorSentinel::raise(PTR_ErrorContextLayer error)
+{
+	if(ErrorPackage* pckg = dynamic_cast<ErrorPackage*>(error.get()))
 	{
-		case COLLECT:
-			this->errors.push_back(std::move(error));
-			return;
-		case THROW:
-			throw ErrorWrapper(std::move(error));
-		case IGNORE:
-		default:
+		switch(this->behavior)
+		{
+			case COLLECT:
+				this->errors.insert(this->errors.end(), pckg->errors.begin(), pckg->errors.end());
+				return;
+			case THROW:
+				if(!pckg->errors.empty())
+					throw WickitError(contextFunction(std::move(pckg->errors[0])));
+				return;
+			case IGNORE:
+			default:
+		}
+	}
+	else
+	{
+		switch(this->behavior)
+		{
+			case COLLECT:
+				this->errors.push_back(contextFunction(std::move(error)));
+				return;
+			case THROW:
+				throw WickitError(contextFunction(std::move(error)));
+			case IGNORE:
+			default:
+		}
+	}
+}
+
+void ErrorSentinel::raise(const APIError& error)
+{
+	this->raise(_MAKE_STD_ERR(error.what()));
+}
+
+void ErrorSentinel::forward(ErrorSentinel* sentinel)
+{
+	if(sentinel == nullptr)
+		sentinel = this->prev;
+	
+	if(sentinel != nullptr)
+	{
+		for(auto& err : this->errors)
+		{
+			sentinel->raise(std::move(err));
+		}
+	}
+	else if(!this->errors.empty())
+		throw ErrorPackage(this->errors);
+	
+	this->errors.clear();
+}
+
+void ErrorSentinel::clear()
+{
+	this->errors.clear();
+}
+
+void ErrorSentinel::flush(std::ostream& out)
+{
+	flushAndPreserve();
+	this->errors.clear();
+}
+
+void ErrorSentinel::flushAndPreserve(std::ostream& out) const
+{
+	bool first = true;
+	for(const auto& err : this->errors)
+	{
+		if(first)
+		{
+			out << "! " << err->what() << "\n";
+			first = false;
+		}
+		else
+			out << "\n! " << err->what() << "\n";
 	}
 }

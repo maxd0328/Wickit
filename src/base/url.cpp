@@ -59,7 +59,7 @@ namespace
 			}
 			catch(const std::filesystem::filesystem_error& e)
 			{
-				throw IOError(parent == nullptr ? URL() : *parent, std::string("Could not compute canonical path: ") + e.what());
+				throw IOError(std::string("Could not locate file: ") + e.what());
 			}
 		}
 		
@@ -68,7 +68,7 @@ namespace
 			auto sourcepath = computePath(source, parent);
 			auto stream = std::make_unique<std::ifstream>(sourcepath, std::ios::in | (textMode ? 0 : std::ios::binary));
 			if(!stream->is_open())
-				throw IOError(parent == nullptr ? URL() : *parent, "Failed to open file: " + sourcepath.string());
+				throw IOError("Could not open file: " + sourcepath.string());
 			return stream;
 		}
 
@@ -77,7 +77,7 @@ namespace
 			auto sourcepath = computePath(source, parent);
 			auto stream = std::make_unique<std::ofstream>(sourcepath, std::ios::out | (textMode ? 0 : std::ios::binary));
 			if(!stream->is_open())
-				throw IOError(parent == nullptr ? URL() : *parent, "Failed to open file: " + sourcepath.string());
+				throw IOError("Could not open file: " + sourcepath.string());
 			return stream;
 		}
 
@@ -155,7 +155,7 @@ URL::URL(const std::string& value, std::shared_ptr<URL> parent)
         }
     }
 
-    throw FormatError(parent == nullptr ? URL() : *parent, "No such protocol: " + protocol);
+    throw FormatError("No such protocol: " + protocol);
 
     assignment:
     this->source = source;
@@ -185,7 +185,8 @@ std::shared_ptr<URL> URL::getParent() const
 
 std::string URL::toString() const
 {
-	return getProtocolName(this->protocol) + "://" + this->source;
+	return this->protocol == nullptr ? "<null>"
+		: getProtocolName(this->protocol) + "://" + this->source;
 }
 
 std::unique_ptr<std::istream> URL::toInputStream(bool textMode) const

@@ -85,13 +85,13 @@ std::string SymbolResolutionError::getErrorMessage(ErrorType type)
 }
 
 SymbolResolutionError::SymbolResolutionError(ErrorType type, const Locator& locator)
-: UserError(locator.getModuleID(), getErrorMessage(type) + ": " + locator.toString()), locator(locator)
+: APIError(getErrorMessage(type) + ": " + locator.toString()), locator(locator)
 {
 	this->type = type;
 }
 
 SymbolResolutionError::SymbolResolutionError(ErrorType type, const std::string& msg, const Locator& locator)
-: UserError(locator.getModuleID(), msg + ": " + locator.toString()), locator(locator)
+: APIError(msg + ": " + locator.toString()), locator(locator)
 {
     this->type = type;
 }

@@ -37,14 +37,30 @@ namespace wckt::err
 			std::string what() const override;
 	};
 	
-	class ErrorWrapper : public std::exception
+	class ErrorPackage : public ErrorContextLayer
+	{
+		private:
+			std::vector<PTR_ErrorContextLayer> errors;
+			
+			ErrorPackage(const std::vector<PTR_ErrorContextLayer>& errors);
+			
+		public:
+			~ErrorPackage() override = default;
+			
+			const std::vector<PTR_ErrorContextLayer>& getErrors() const;
+			std::string what() const override;
+			
+			friend class ErrorSentinel;
+	};
+	
+	class WickitError : public std::exception
 	{
 		private:
 			PTR_ErrorContextLayer top;
 		
 		public:
-			ErrorWrapper(PTR_ErrorContextLayer top);
-			~ErrorWrapper() = default;
+			WickitError(PTR_ErrorContextLayer top);
+			~WickitError() = default;
 			
 			const ErrorContextLayer& getTop() const;
 			PTR_ErrorContextLayer releaseTop();
@@ -52,11 +68,17 @@ namespace wckt::err
 	};
 	
 	#define _MAKE_STD_ERR(_Msg)			std::make_unique<wckt::err::StandardError>(std::string(_Msg))
-	#define _MAKE_ERR(_Class, _Args)	std::make_unique<_Class>(_Args)
+	#define _MAKE_ERR(_Class, _Args...)	std::make_unique<_Class>(_Args)
 	
-	struct TaskFailed : public std::exception
-	{};
-	
+	/**
+	 * Error Sentinel Rules:
+	 * 
+	 * When subordinate sentinel is in THROW mode:
+	 *  - Guard lifetime of subordinate
+	 * When subordinate sentinel is in COLLECT mode:
+	 *  - Guard lifetime of subordinate if no supervisor reference is given
+	 *  - Otherwise, do not guard if current sentinel is in THROW mode
+	*/
 	class ErrorSentinel
 	{
 		public:
@@ -67,20 +89,34 @@ namespace wckt::err
 				IGNORE
 			};
 			
+			struct no_except : public APIError
+			{
+				private:
+					no_except();
+			};
+			
 			typedef std::function<PTR_ErrorContextLayer(PTR_ErrorContextLayer)> errctx_fn_t;
 			
 			static errctx_fn_t NO_CONTEXT_FN;
 			
 		private:
+			ErrorSentinel* prev;
 			behavior_t behavior;
 			std::vector<PTR_ErrorContextLayer> errors;
 			errctx_fn_t contextFunction;
 			
 		public:
 			ErrorSentinel(behavior_t behavior, const errctx_fn_t& contextFunction);
-			~ErrorSentinel() = default;
+			ErrorSentinel(ErrorSentinel* prev, behavior_t behavior, const errctx_fn_t& contextFunction);
+			~ErrorSentinel();
+			
+			ErrorSentinel* getPrev() const;
+			behavior_t getBehavior() const;
+			const std::vector<PTR_ErrorContextLayer>& getErrors() const;
+			errctx_fn_t getContextFunction() const;
 			
 			void raise(PTR_ErrorContextLayer error);
+			void raise(const APIError& error);
 			
 			template<typename _Ty, typename... _Args>
 			void raise(_Args... args)
@@ -88,48 +124,48 @@ namespace wckt::err
 				raise(_MAKE_ERR(_Ty, args));
 			}
 			
-			template<auto __F_Action, typename... _Args>
-			auto guard(_Args... args) -> decltype(__F_Action(args...))
+			template<typename _Exc = APIError>
+			bool guard(const std::function<void(const ErrorSentinel&)>& fn,
+				const std::function<void(const _Exc&)>& onExc = nullptr) const
 			{
-				try { return __F_Action(args); }
-				catch(const APIException& e)
+				try { fn(*this); return true; }
+				catch(const _Exc& e)
 				{
-					raise(contextFunction(_MAKE_STD_ERR(e.what())));
-					throw TaskFailed();
+					if(onExc)
+						onExc(e);
+					raise(e);
+					return false;
 				}
-				catch(ErrorWrapper& e)
+				catch(WickitError& e)
 				{
-					raise(contextFunction(e.releaseTop()));
-					throw TaskFailed();
-				}
-			}
-			
-			template<auto __F_Action, typename... _Args>
-			auto guardWeak(_Args... args) -> decltype(__F_Action(args...))
-			{
-				try { return __F_Action(args); }
-				catch(ErrorWrapper& e)
-				{
-					raise(contextFunction(e.releaseTop()));
-					throw TaskFailed();
+					raise(e.releaseTop());
+					return false;
 				}
 			}
 			
-			template<auto __F_Action, typename... _Args>
-			void guardNoExcept(_Args... args)
+			template<typename _Exc = APIError>
+			bool guard(const std::function<void(ErrorSentinel&)>& fn,
+				const std::function<void(const _Exc&)>& onExc = nullptr)
 			{
-				try { __F_Action(args); }
-				catch(const APIException& e) { raise(contextFunction(_MAKE_STD_ERR(e.what()))); }
-				catch(ErrorWrapper& e) { raise(contextFunction(e.releaseTop())); }
+				try { fn(*this); return true; }
+				catch(const _Exc& e)
+				{
+					if(onExc)
+						onExc(e);
+					raise(e);
+					return false;
+				}
+				catch(WickitError& e)
+				{
+					raise(e.releaseTop());
+					return false;
+				}
 			}
 			
-			template<auto __F_Action, typename... _Args>
-			void guardWeakNoExcept(_Args... args)
-			{
-				try { __F_Action(args); }
-				catch(ErrorWrapper& e) { raise(contextFunction(e.releaseTop())); }
-			}
+			void forward(ErrorSentinel* sentinel = nullptr);
+			void clear();
 			
-			
+			void flush(std::ostream& out = std::cout);
+			void flushAndPreserve(std::ostream& out = std::cout) const;
 	};
 };

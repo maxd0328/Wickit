@@ -2,12 +2,15 @@
 
 #include "include/definitions.h"
 #include "base/url.h"
-#include "include/exception.h"
+#include "error/error.h"
 
 #define _REQ(_Name)				{ _Name, true, "" }
 #define _OPT(_Name, _Default)	{ _Name, false, _Default }
 
-#define _APPLY_TAG_RULE(_Impl)		std::unique_ptr<XMLObject> _Impl apply(const XMLParser& parser, argmap_t& arguments, childmap_t& children) const
+#define _APPLY_TAG_RULE(_Impl)	std::unique_ptr<wckt::base::XMLObject> _Impl apply(const wckt::base::XMLParser& parser,	\
+									wckt::base::TagRule::argmap_t& arguments,											\
+									wckt::base::TagRule::childmap_t& children,											\
+									wckt::err::ErrorSentinel& sentinel) const
 
 namespace wckt::base
 {
@@ -77,6 +80,4 @@ namespace wckt::base
 			std::shared_ptr<TagRule> getRule() const;
 			std::unique_ptr<XMLObject> build() const;
 	};
-	
-	_MAKE_USER_ERROR(XMLParseError)
 }

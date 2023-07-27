@@ -1,6 +1,7 @@
 #include "base/xmlparser.h"
 #include "include/strutil.h"
 
+using namespace wckt;
 using namespace wckt::base;
 
 TagRule::TagRule(const std::string& name, const std::vector<argument_t>& arguments, const std::vector<std::shared_ptr<TagRule>>& children)
@@ -53,7 +54,7 @@ typedef struct
 
 static std::string getLocatorString(__PVEC_ARG)
 {
-	return "[" + __VPARSER->getURL()->toString() + "]:" + std::to_string(__VLINENO) + ":" + std::to_string(__VPOS - __VLINEPOS + 1);
+	return "\"" + __VPARSER->getURL()->toString() + "\":" + std::to_string(__VLINENO) + ":" + std::to_string(__VPOS - __VLINEPOS + 1);
 }
 
 static std::string getTracebackString(__PVEC_ARG)
@@ -64,17 +65,49 @@ static std::string getTracebackString(__PVEC_ARG)
 	return "--> " + src;
 }
 
-// [file://src/module.xml]:10:1 - Invalid token '!', expected '<'
+// ! Error while parsing XML:
+// "file://src/module.xml":10:1 - Invalid token '!', expected '<'
 // --> !<dependencies>
+//  ^ dependency of "file://src/deps/module0.xml"
+//  ^ dependency of "file://src/deps/module1.xml"
 
-struct parse_error : public std::runtime_error
+// ! Error while parsing XML:
+// "file://src/module.xml":19:1 - While parsing <dependencies...>: bundle must be a boolean value
+
+// ! Could not open file: /home/maxim/project/module.xml
+//  ^ dependency of "file://src/deps/module0.xml"
+//  ^ dependency of "file://src/deps/module1.xml"
+
+namespace
 {
-	public:
+	struct parse_error : public APIError
+	{
 		parse_error(const std::string& token, const std::string& expected, __PVEC_ARG)
-		: std::runtime_error(getLocatorString(__PVEC) + " - Invalid token \'" + token + "\', expected " + expected + "\n" + getTracebackString(__PVEC)) {}
+		: APIError(getLocatorString(__PVEC) + " - Invalid token \'" + token + "\', expected " + expected + "\n" + getTracebackString(__PVEC)) {}
 		parse_error(const std::string& message, __PVEC_ARG)
-		: std::runtime_error(getLocatorString(__PVEC) + " - " + message + "\n" + getTracebackString(__PVEC)) {}
-};
+		: APIError(getLocatorString(__PVEC) + " - " + message + "\n" + getTracebackString(__PVEC)) {}
+	};
+
+	struct inner_context_layer : public err::ErrorContextLayer
+	{
+		inner_context_layer(err::PTR_ErrorContextLayer next, const std::string& tagName, __PVEC_ARG)
+		: ErrorContextLayer(std::move(next)), prefix(getLocatorString(__PVEC) + " - While parsing <" + tagName + "...>: ") {}
+		
+		std::string what() const override
+		{
+			return prefix + getNext()->what();
+		}
+		
+		private:
+			std::string prefix;
+	};
+	
+	struct outer_context_layer : public err::ErrorContextLayer
+	{
+		outer_context_layer(err::PTR_ErrorContextLayer next): ErrorContextLayer(std::move(next)) {}
+		std::string what() const override { return "Error while parsing XML:\n" + getNext()->what(); }
+	};
+}
 
 inline static void jumpWhitespace(__PVEC_ARG)
 {
@@ -160,8 +193,11 @@ static inline bool foundArgument(const std::vector<TagRule::argument_t>& argumen
 	return false;
 }
 
-static tagoutput_t parseTag(const std::vector<std::shared_ptr<TagRule>>& rules, __PVEC_ARG)
+static tagoutput_t parseTag(const std::vector<std::shared_ptr<TagRule>>& rules, err::ErrorSentinel& outerSentinel, __PVEC_ARG)
 {
+	jumpWhitespace(__PVEC);
+	auto pvecCopy = __PVEC;
+	
 	consume('<', __PVEC);
 	std::string header = consumeIdentifier(__PVEC);
 	std::shared_ptr<TagRule> rule = nullptr;
@@ -174,7 +210,7 @@ static tagoutput_t parseTag(const std::vector<std::shared_ptr<TagRule>>& rules, 
 		}
 	}
 	if(rule == nullptr)
-		throw parse_error("Disallowed tag name \'" + header + "\'", __PVEC);
+		outerSentinel.raise(parse_error("Disallowed tag name \'" + header + "\'", __PVEC));
 	
 	TagRule::argmap_t arguments;
 	while(!consumeOptional('>', __PVEC))
@@ -186,20 +222,20 @@ static tagoutput_t parseTag(const std::vector<std::shared_ptr<TagRule>>& rules, 
 		else argumentValue = "true";
 		
 		if(arguments.find(argumentKey) != arguments.end())
-			throw parse_error("Duplicate argument \'" + argumentKey + "\'", __PVEC);
+			outerSentinel.raise(parse_error("Duplicate argument \'" + argumentKey + "\'", __PVEC));
 		arguments[argumentKey] = argumentValue;
 	}
 	
 	for(const auto& entry : arguments)
 		if(!foundArgument(rule->getArguments(), entry.first))
-			throw parse_error("Disallowed argument \'" + entry.first + "\'", __PVEC);
+			outerSentinel.raise(parse_error("Disallowed argument \'" + entry.first + "\'", __PVEC));
 	for(const auto& expectedArgument : rule->getArguments())
 	{
 		if(arguments.find(expectedArgument.name) == arguments.end())
 		{
 			if(!expectedArgument.required)
 				arguments[expectedArgument.name] = expectedArgument.defaultValue;
-			else throw parse_error("Missing argument \'" + expectedArgument.name + "\'", __PVEC);
+			else outerSentinel.raise(parse_error("Missing argument \'" + expectedArgument.name + "\'", __PVEC));
 		}
 	}
 	
@@ -216,23 +252,19 @@ static tagoutput_t parseTag(const std::vector<std::shared_ptr<TagRule>>& rules, 
 				break;
 			__VPOS = tmpPos;
 			
-			tagoutput_t output = parseTag(rule->getChildren(), __PVEC);
+			tagoutput_t output = parseTag(rule->getChildren(), outerSentinel, __PVEC);
 			children[output.tagName].push_back(std::move(output.object));
 		}
 		std::string footer = consumeIdentifier(__PVEC);
 		if(footer != header)
-			throw parse_error(std::string("Unexpected tag name \'") + footer + "\', expected \'" + header + "\'", __PVEC);
+			outerSentinel.raise(parse_error(std::string("Unexpected tag name \'") + footer + "\', expected \'" + header + "\'", __PVEC));
 		consume('>', __PVEC);
 	}
 	
-	try
-	{
-		return { rule->apply(*__VPARSER, arguments, children), rule->getName() };
-	}
-	catch(const UserError& e)
-	{
-		throw parse_error(e.what(), __PVEC);
-	}
+	err::ErrorSentinel innerSentinel(&outerSentinel, err::ErrorSentinel::THROW, [header, pvecCopy](err::PTR_ErrorContextLayer ptr) {
+		return _MAKE_ERR(inner_context_layer, ptr, header, pvecCopy);
+	});
+	return { rule->apply(*__VPARSER, arguments, children, innerSentinel), rule->getName() };
 }
 
 XMLParser::XMLParser(const URL& url, std::shared_ptr<TagRule> rule)
@@ -251,18 +283,21 @@ std::shared_ptr<TagRule> XMLParser::getRule() const
 
 std::unique_ptr<XMLObject> XMLParser::build() const
 {
-	try
-	{
+	err::ErrorSentinel outerSentinel(nullptr, err::ErrorSentinel::THROW, [](err::PTR_ErrorContextLayer ptr) {
+		return _MAKE_ERR(outer_context_layer, ptr);
+	});
+	
+	std::unique_ptr<XMLObject> outputPtr;
+	outerSentinel.guard<parse_error>([this, &outputPtr](err::ErrorSentinel& es) {
 		xmlparse_t __PVEC = { this->url->read(), 0, 1, 0, this };
-		tagoutput_t output = parseTag({ this->rule }, __PVEC);
+		std::vector<std::shared_ptr<TagRule>> rules = { this->rule };
+		
+		tagoutput_t output = parseTag(rules, es, __PVEC);
 		
 		consumeOptional('\0', __PVEC);
 		if(__VCHAR != '\0')
 			throw parse_error(std::string(1, __VCHAR), "end of stream", __PVEC);
-		return std::move(output.object);
-	}
-	catch(const parse_error& e)
-	{
-		throw XMLParseError(*this->url, std::string("Error while parsing XML: ") + e.what());
-	}
+		outputPtr = std::move(output.object);
+	});
+	return outputPtr;
 }

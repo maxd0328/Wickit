@@ -11,7 +11,7 @@ using namespace wckt::base::modxml;
 MODXML_IMPLRULE(DependencyTag, "dependency", _INIT(_REQ("src"), _OPT("bundle", "false"), _OPT("pckg", ""), _OPT("into", "")), _INIT())
 _APPLY_TAG_RULE(DependencyTag::)
 {
-	assert(arguments["bundle"] == "true" || arguments["bundle"] == "false", "bundle must be a boolean value", true, *parser.getURL());
+	assert(arguments["bundle"] == "true" || arguments["bundle"] == "false", "bundle must be a boolean value");
 	return std::make_unique<ModuleDependency>(URL(arguments["src"], parser.getURL()), sym::Locator(arguments["pckg"]),
 		sym::Locator(arguments["into"]), arguments["bundle"] == "true");
 }
@@ -121,7 +121,7 @@ ModuleBuilder::ModuleBuilder(const std::vector<std::shared_ptr<TagRule>>& compon
 _APPLY_TAG_RULE(ModuleBuilder::)
 {
 	for(const auto& childList : children)
-		assert(childList.second.size() <= 1, "Each tag under module may only be declared once", true, *parser.getURL());
+		assert(childList.second.size() <= 1, "Each tag under module may only be declared once");
 	
 	std::vector<ModuleDependency> dependencies;
 	Package rootPackage;

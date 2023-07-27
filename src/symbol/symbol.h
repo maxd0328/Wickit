@@ -7,7 +7,7 @@ namespace wckt::sym
 	// Forward declaration, refer to locator.h //
 	class Locator;
 
-	class SymbolResolutionError : public UserError
+	class SymbolResolutionError : public APIError
 	{
 		public:
 			enum ErrorType

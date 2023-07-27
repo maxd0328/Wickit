@@ -1,11 +1,29 @@
 #include "base/modules/dependencies.h"
 #include "base/xmlparser.h"
-#include "include/exception.h"
+#include "error/error.h"
 #include <queue>
 #include <list>
 #include <unordered_set>
 
+using namespace wckt;
 using namespace wckt::base;
+
+namespace
+{
+	struct DependencyContextLayer : err::ErrorContextLayer
+	{
+		DependencyContextLayer(err::PTR_ErrorContextLayer next, const URL& url): ErrorContextLayer(std::move(next)), url(url)
+		{}
+		
+		std::string what() const override
+		{
+			return getNext()->what() + "\n ^ Dependency of " + url.toString();
+		}
+		
+		private:
+			URL url;
+	};
+}
 
 static const std::shared_ptr<ModuleBuilder> BUILDER = std::make_shared<ModuleBuilder>();
 const modgenfunc_t DependencyResolver::DEFAULT_MODGENFUNC = DependencyResolver::genModuleBuilderFunction(BUILDER);
@@ -24,22 +42,35 @@ modgenfunc_t DependencyResolver::genModuleBuilderFunction(std::shared_ptr<Module
 
 static void resolveDependencies(std::shared_ptr<Module> module, DependencyResolver::modulemap_t& modulemap, const modgenfunc_t& genfunc)
 {
+	err::ErrorSentinel sentinel(nullptr, err::ErrorSentinel::THROW, [module](err::PTR_ErrorContextLayer ptr) {
+		return _MAKE_ERR(DependencyContextLayer, ptr, module->getModulefile());
+	});
+	
 	for(const auto& dep : module->getDependencies())
 	{
 		if(modulemap.find(dep.getModuleURL()) == modulemap.end())
 		{
-			std::shared_ptr<Module> newModule = genfunc(dep.getModuleURL());
-			modulemap[dep.getModuleURL()] = newModule;
-			resolveDependencies(newModule, modulemap, genfunc);
+			sentinel.guard<IOError>([&genfunc, &modulemap, &dep](err::ErrorSentinel&) {
+				std::shared_ptr<Module> newModule = genfunc(dep.getModuleURL());
+				modulemap[dep.getModuleURL()] = newModule;
+				resolveDependencies(newModule, modulemap, genfunc);
+			});
 		}
 	}
 }
 
 DependencyResolver::DependencyResolver(const URL& moduleURL, const modgenfunc_t& genfunc)
 {
-	std::shared_ptr<Module> module = genfunc(moduleURL);
-	this->moduleRegistry[moduleURL] = genfunc(moduleURL);
-	resolveDependencies(module, this->moduleRegistry, genfunc);
+	err::ErrorSentinel sentinel(nullptr, err::ErrorSentinel::THROW, err::ErrorSentinel::NO_CONTEXT_FN);
+	
+	try
+	{
+		std::shared_ptr<Module> module = genfunc(moduleURL);
+		this->moduleRegistry[moduleURL] = module;
+		resolveDependencies(module, this->moduleRegistry, genfunc);
+	}
+	catch(err::ErrorWrapper& e) { sentinel.raise(e.releaseTop()); }
+	catch(const IOError& e) { sentinel.raise(e); }
 }
 
 DependencyResolver::DependencyResolver(const Module& module, const URL& moduleOrigin, const modgenfunc_t& genfunc)
@@ -121,5 +152,5 @@ std::vector<std::shared_ptr<Module>> DependencyResolver::computeTopologicalOrder
 }
 
 CyclicDependencyError::CyclicDependencyError()
-: UserError(URL(), "Module dependency tree contains cyclic dependencies")
+: APIError("Module dependency tree contains cyclic dependencies")
 {}

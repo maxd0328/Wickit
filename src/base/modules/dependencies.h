@@ -31,7 +31,7 @@ namespace wckt::base
 			std::vector<std::shared_ptr<Module>> computeTopologicalOrder() const;
 	};
 	
-	struct CyclicDependencyError : public UserError
+	struct CyclicDependencyError : public APIError
 	{
 		CyclicDependencyError();
 		~CyclicDependencyError() = default;
