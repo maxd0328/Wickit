@@ -39,7 +39,10 @@ namespace wckt::build
 			
 		public:
 			BuildContext(std::shared_ptr<base::EngineContext> context, ARG_moduleid_t moduleID);
+			BuildContext(const BuildContext& src);
 			~BuildContext() = default;
+			
+			BuildContext& operator=(const BuildContext& src);
 			
 			const base::EngineContext& getContext() const;
 			uint32_t getContextID() const;

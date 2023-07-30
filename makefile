@@ -7,19 +7,19 @@
 # ---------------------------------------------------------------------------
 
 # Define compiler and arguments
-CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Isrc
+CXX			= g++
+CXXFLAGS	= -std=c++17 -Wall -Isrc -g
 
 # Define source, build, and artifact directories
-SRC_DIR = ./src
-BUILD_DIR = ./build
-OBJ_DIR = $(BUILD_DIR)/artifacts
+SRC_DIR		= src
+BUILD_DIR	= build
+OBJ_DIR		= $(BUILD_DIR)/artifacts
 
 # Locate all source files
-SRCS = $(wildcard $(SRC_DIR)/*.cpp $(SRC_DIR)/**/*.cpp)
+SRCS = $(shell find src -name '*.cpp')
 
 # Locate all object files (build artifacts)
-OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
+OBJS = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
 
 # Locate target executable
 TARGET = $(BUILD_DIR)/wickit

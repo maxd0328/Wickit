@@ -37,7 +37,7 @@ namespace wckt::err
 	
 	#define USE_BASIC_CONTEXT_LAYER(_Name)					\
 		[](wckt::err::PTR_ErrorContextLayer ptr)			\
-		{ return _MAKE_ERR(_Name, ptr); }		
+		{ return _MAKE_ERR(_Name, std::move(ptr)); }		
 	
 	class StandardError : public ErrorContextLayer
 	{
@@ -56,7 +56,7 @@ namespace wckt::err
 		private:
 			std::vector<PTR_ErrorContextLayer> errors;
 			
-			ErrorPackage(const std::vector<PTR_ErrorContextLayer>& errors);
+			ErrorPackage(std::vector<PTR_ErrorContextLayer>& errors);
 			
 		public:
 			~ErrorPackage() override = default;
@@ -148,7 +148,7 @@ namespace wckt::err
 			template<typename _Ty, typename... _Args>
 			void raise(_Args... args)
 			{
-				raise(_MAKE_ERR(_Ty, args));
+				raise(_MAKE_ERR(_Ty, args...));
 			}
 			
 			template<typename _Exc = APIError>

@@ -66,7 +66,7 @@ namespace
 		std::unique_ptr<std::istream> istream(const std::string& source, std::shared_ptr<URL> parent, bool textMode) const override
 		{
 			auto sourcepath = computePath(source, parent);
-			auto stream = std::make_unique<std::ifstream>(sourcepath, std::ios::in | (textMode ? 0 : std::ios::binary));
+			auto stream = std::make_unique<std::ifstream>(sourcepath.c_str(), std::ios::in | (textMode ? (std::ios::openmode) 0 : std::ios::binary));
 			if(!stream->is_open())
 				throw IOError("Could not open file: " + sourcepath.string());
 			return stream;
@@ -75,7 +75,7 @@ namespace
 		std::unique_ptr<std::ostream> ostream(const std::string& source, std::shared_ptr<URL> parent, bool textMode) const override
 		{
 			auto sourcepath = computePath(source, parent);
-			auto stream = std::make_unique<std::ofstream>(sourcepath, std::ios::out | (textMode ? 0 : std::ios::binary));
+			auto stream = std::make_unique<std::ofstream>(sourcepath.c_str(), std::ios::out | (textMode ? (std::ios::openmode) 0 : std::ios::binary));
 			if(!stream->is_open())
 				throw IOError("Could not open file: " + sourcepath.string());
 			return stream;

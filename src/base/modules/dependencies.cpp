@@ -25,8 +25,11 @@ namespace
 	};
 }
 
-static const std::shared_ptr<ModuleBuilder> BUILDER = std::make_shared<ModuleBuilder>();
-const modgenfunc_t DependencyResolver::DEFAULT_MODGENFUNC = DependencyResolver::genModuleBuilderFunction(BUILDER);
+modgenfunc_t DependencyResolver::modgenfuncDefault()
+{
+	static auto ptr { DependencyResolver::genModuleBuilderFunction(ModuleBuilder::standard()) };
+	return ptr;
+}
 
 modgenfunc_t DependencyResolver::genModuleBuilderFunction(std::shared_ptr<ModuleBuilder> builder)
 {
@@ -43,7 +46,7 @@ modgenfunc_t DependencyResolver::genModuleBuilderFunction(std::shared_ptr<Module
 static void resolveDependencies(std::shared_ptr<Module> module, DependencyResolver::modulemap_t& modulemap, const modgenfunc_t& genfunc)
 {
 	err::ErrorSentinel sentinel(nullptr, err::ErrorSentinel::THROW, [module](err::PTR_ErrorContextLayer ptr) {
-		return _MAKE_ERR(DependencyContextLayer, ptr, module->getModulefile());
+		return _MAKE_ERR(DependencyContextLayer, std::move(ptr), module->getModulefile());
 	});
 	
 	for(const auto& dep : module->getDependencies())

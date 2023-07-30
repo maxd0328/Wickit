@@ -92,24 +92,24 @@ namespace
 		__Ts& operator()(const std::vector<std::string>& pckgs, ARG_moduleid_t moduleID, __Tc& context)
 		{
 			// Get the static space of that module
-			__Ts& symbol = context.getModule(moduleID).getStaticSpace();
+			__Ts* symbol = &context.getModule(moduleID).getStaticSpace();
 			for(const auto& pckg : pckgs)
 			{
 				// When there's another symbol to navigate to, we ensure the parent symbol is a namespace
-				__Tn& n = Namespace::assertSymbol(symbol);
+				__Tn& n = Namespace::assertSymbol(*symbol);
 
 				// Perform template action (will usually be nothing, sometimes its to auto-declare)
 				__F_Action(n, pckg);
 
 				// Navigate to the next symbol
-				symbol = n.getSymbol(pckg);
+				symbol = &n.getSymbol(pckg);
 				
 				// If the acquired symbol is a reference symbol to another module, use its locator to jump to its target
 				// (Will recurse to this locate function)
-				if(__Tr* r = dynamic_cast<__Tr*>(&symbol))
-					symbol = r->getTarget().locate(context);
+				if(__Tr* r = dynamic_cast<__Tr*>(symbol))
+					symbol = &r->getTarget().locate(context);
 			}
-			return symbol;
+			return *symbol;
 		}
 	};
 

@@ -13,7 +13,7 @@ namespace wckt::base
 	class DependencyResolver
 	{
 		public:
-			static const modgenfunc_t DEFAULT_MODGENFUNC;
+			static modgenfunc_t modgenfuncDefault();
 			static modgenfunc_t genModuleBuilderFunction(std::shared_ptr<ModuleBuilder> builder);
 			
 			typedef std::unordered_map<URL, std::shared_ptr<Module>, URL::hasher_t> modulemap_t;
@@ -22,8 +22,8 @@ namespace wckt::base
 			modulemap_t moduleRegistry;
 			
 		public:
-			DependencyResolver(const URL& moduleURL, const modgenfunc_t& genfunc = DEFAULT_MODGENFUNC);
-			DependencyResolver(const Module& module, const URL& moduleOrigin, const modgenfunc_t& genfunc = DEFAULT_MODGENFUNC);
+			DependencyResolver(const URL& moduleURL, const modgenfunc_t& genfunc = modgenfuncDefault());
+			DependencyResolver(const Module& module, const URL& moduleOrigin, const modgenfunc_t& genfunc = modgenfuncDefault());
 			~DependencyResolver() = default;
 			
 			const modulemap_t& getModuleRegistry() const;

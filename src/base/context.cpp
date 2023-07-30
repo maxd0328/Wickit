@@ -88,8 +88,8 @@ uint32_t EngineContext::registerModule(std::shared_ptr<Module> module)
 	
 	moduleid_t moduleID = this->nextModuleID++;
 
-	this->registeredModules[moduleID] = RuntimeModule(this, module, moduleID);
-	this->moduleFinder[module->getModulefile()] = moduleID;
+	this->registeredModules.insert(std::pair(moduleID, RuntimeModule(this, module, moduleID)));
+	this->moduleFinder.insert(std::pair(module->getModulefile(), moduleID));
 	
 	return moduleID;
 }

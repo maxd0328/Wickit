@@ -12,11 +12,12 @@ namespace
 
 static void quit(err::ErrorSentinel& sentinel)
 {
-	if(!sentinel.getErrors().empty())
+	if(sentinel.hasErrors())
 	{
+		auto qty = sentinel.getErrors().size();
 		sentinel.flush(std::cout);
 		std::cout << std::endl;
-		std::cout << "Engine terminated with " << sentinel.getErrors().size() << " error(s)" << std::endl;
+		std::cout << "Engine terminated with " << qty << " error(s)" << std::endl;
 		exit(1);
 	}
 	else exit(0);

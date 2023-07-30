@@ -8,7 +8,7 @@ using namespace wckt;
 using namespace wckt::base;
 using namespace wckt::base::modxml;
 
-MODXML_IMPLRULE(DependencyTag, "dependency", _INIT(_REQ("src"), _OPT("bundle", "false"), _OPT("pckg", ""), _OPT("into", "")), _INIT())
+MODXML_IMPLRULE(DependencyTag, "dependency", _INIT(_REQ("src"), _OPT("bundle", "false"), _OPT("pckg", ""), _OPT("into", "")), _INIT(), )
 _APPLY_TAG_RULE(DependencyTag::)
 {
 	assert(arguments["bundle"] == "true" || arguments["bundle"] == "false", "bundle must be a boolean value");
@@ -16,7 +16,7 @@ _APPLY_TAG_RULE(DependencyTag::)
 		sym::Locator(arguments["into"]), arguments["bundle"] == "true");
 }
 
-MODXML_IMPLRULE(DependenciesTag, "dependencies", _INIT(), _INIT(DependencyTag::PTR))
+MODXML_IMPLRULE(DependenciesTag, "dependencies", _INIT(), _INIT(DependencyTag::ptr()), )
 _APPLY_TAG_RULE(DependenciesTag::)
 {
 	auto dependencies = std::make_unique<XMLVector<ModuleDependency>>();
@@ -27,13 +27,13 @@ _APPLY_TAG_RULE(DependenciesTag::)
 	return dependencies;
 }
 
-MODXML_IMPLRULE(AssetTag, "asset", _INIT(_REQ("src")), _INIT())
+MODXML_IMPLRULE(AssetTag, "asset", _INIT(_REQ("src")), _INIT(), )
 _APPLY_TAG_RULE(AssetTag::)
 {
 	return std::make_unique<XMLWrapper<URL>>(URL(arguments["src"], parser.getURL()));
 }
 
-MODXML_IMPLRULE(PackageTag, "package", _INIT(_REQ("name"), _OPT("visibility", "public")), _INIT(PackageTag::PTR, AssetTag::PTR))
+MODXML_IMPLRULE(PackageTag, "package", _INIT(_REQ("name"), _OPT("visibility", "public")), _INIT(AssetTag::ptr()), ptr->_getChildren().push_back(ptr))
 _APPLY_TAG_RULE(PackageTag::)
 {
 	std::vector<Package> packages;
@@ -45,7 +45,7 @@ _APPLY_TAG_RULE(PackageTag::)
 	return std::make_unique<Package>(arguments["name"], type::Visibility::fromString(arguments["visibility"]), packages, assets);
 }
 
-MODXML_IMPLRULE(PackagesTag, "packages", _INIT(), _INIT(PackageTag::PTR, AssetTag::PTR))
+MODXML_IMPLRULE(PackagesTag, "packages", _INIT(), _INIT(PackageTag::ptr(), AssetTag::ptr()), )
 _APPLY_TAG_RULE(PackagesTag::)
 {
 	std::vector<Package> packages;
@@ -69,13 +69,13 @@ namespace
 	};
 }
 
-MODXML_IMPLRULE(MountTag, "mount", _INIT(_REQ("pckg"), _REQ("dst")), _INIT())
+MODXML_IMPLRULE(MountTag, "mount", _INIT(_REQ("pckg"), _REQ("dst")), _INIT(), )
 _APPLY_TAG_RULE(MountTag::)
 {
 	return std::make_unique<mount_t>(sym::Locator(arguments["pckg"]), URL(arguments["dst"], parser.getURL()));
 }
 
-MODXML_IMPLRULE(BuildTag, "build", _INIT(_OPT("dst", "%default%")), _INIT(MountTag::PTR))
+MODXML_IMPLRULE(BuildTag, "build", _INIT(_OPT("dst", "%default%")), _INIT(MountTag::ptr()), )
 _APPLY_TAG_RULE(BuildTag::)
 {
 	std::map<sym::Locator, URL> mounts;
@@ -91,25 +91,20 @@ _APPLY_TAG_RULE(BuildTag::)
 	return std::make_unique<BuildComponent>(mounts);
 }
 
-MODXML_IMPLRULE(EntryTag, "entry", _INIT(_REQ("symbol")), _INIT())
+MODXML_IMPLRULE(EntryTag, "entry", _INIT(_REQ("symbol")), _INIT(), )
 _APPLY_TAG_RULE(EntryTag::)
 {
 	return std::make_unique<EntryComponent>(sym::Locator(arguments["symbol"]));
 }
 
-const std::shared_ptr<ModuleBuilder> ModuleBuilder::DEFAULT = std::make_shared<ModuleBuilder>();
-
-static bool ruleFound(const std::string& ruleName, const std::vector<std::shared_ptr<TagRule>>& componentRules)
-{
-	for(std::shared_ptr<TagRule> rule : componentRules)
-		if(rule->getName() == ruleName)
-			return true;
-	return false;
+std::shared_ptr<ModuleBuilder> ModuleBuilder::standard() {
+	static auto standard = std::make_shared<ModuleBuilder>();
+	return standard;
 }
 
 static std::vector<std::shared_ptr<TagRule>> generateComponentRules(const std::vector<std::shared_ptr<TagRule>>& componentRules)
 {
-	std::vector<std::shared_ptr<TagRule>> outVec = { DependenciesTag::PTR, PackagesTag::PTR, BuildTag::PTR, EntryTag::PTR };
+	std::vector<std::shared_ptr<TagRule>> outVec = { DependenciesTag::ptr(), PackagesTag::ptr(), BuildTag::ptr(), EntryTag::ptr() };
 	outVec.insert(outVec.end(), componentRules.begin(), componentRules.end());
 	return outVec;
 }

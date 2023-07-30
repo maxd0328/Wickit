@@ -17,6 +17,8 @@ namespace wckt::base
 			virtual std::string append(const std::string& source, const std::string& elem) const = 0;
     };
 	
+	struct __impl_URLHasher__;
+	
     class URL
     {
         public:

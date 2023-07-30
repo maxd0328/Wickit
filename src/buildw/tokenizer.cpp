@@ -78,7 +78,7 @@ namespace
 
 #define _ICHAR		( _ISRC[_IPOS] )
 
-#define _WHITESPACE(ch)		( std::string("\n\r\t\0 ").find(ch) != std::string::npos )
+#define _WHITESPACE(ch)		( std::string("\n\r\t ").find(ch) != std::string::npos )
 #define _ALPHANUMERIC(ch)	( (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_' || ch == '$' )
 #define _SYMBOLIC(ch)		( std::string("~!@%^&*()-=+[]{}|;:,<.>/?").find(ch) != std::string::npos )
 
@@ -175,7 +175,7 @@ static void findLongestMatch(Token::class_t& _class, size_t& len, err::ErrorSent
 	if(_class == Token::__END__)
 		sentinel.raise(_MAKE_STD_ERR("\'" + token + "\' is not a token"));
 	else
-		len = maxMatch.length() > len ? len : maxMatch.length();
+		len = (size_t) maxMatch.length() > len ? len : maxMatch.length();
 }
 
 static void nextReal(err::ErrorSentinel& parentSentinel, _IVEC_ARG)
@@ -183,7 +183,7 @@ static void nextReal(err::ErrorSentinel& parentSentinel, _IVEC_ARG)
 	size_t len;
 	char repairChar = 0;
 	err::ErrorSentinel outerSentinel(&parentSentinel, err::ErrorSentinel::COLLECT, [&_IVEC, &len](err::PTR_ErrorContextLayer ptr) {
-		return _MAKE_ERR(IntrasourceContextLayer, ptr, _IPOS, len, _IBINFO.sourceTable);
+		return _MAKE_ERR(IntrasourceContextLayer, std::move(ptr), _IPOS, len, _IBINFO.sourceTable);
 	});
 	
 	{
@@ -208,7 +208,7 @@ static void nextReal(err::ErrorSentinel& parentSentinel, _IVEC_ARG)
 		if(_class == Token::COMMENT_SINGLELINE)
 		{
 			_IPOS += len;
-			while(_ICHAR < _ISRC.length() && _ICHAR != '\n')
+			while(_IPOS < _ISRC.length() && _ICHAR != '\n')
 				_IPOS++;
 			return;
 		}

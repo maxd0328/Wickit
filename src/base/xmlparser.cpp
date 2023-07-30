@@ -5,10 +5,12 @@ using namespace wckt;
 using namespace wckt::base;
 
 TagRule::TagRule(const std::string& name, const std::vector<argument_t>& arguments, const std::vector<std::shared_ptr<TagRule>>& children)
+: name(name), arguments(arguments), children(children)
+{}
+
+std::vector<std::shared_ptr<TagRule>>& TagRule::_getChildren()
 {
-	this->name = name;
-	this->arguments = arguments;
-	this->children = children;
+	return this->children;
 }
 
 std::string TagRule::getName() const
@@ -21,7 +23,7 @@ std::vector<TagRule::argument_t> TagRule::getArguments() const
 	return this->arguments;
 }
 
-std::vector<std::shared_ptr<TagRule>> TagRule::getChildren() const
+const std::vector<std::shared_ptr<TagRule>>& TagRule::getChildren() const
 {
 	return this->children;
 }
@@ -35,7 +37,7 @@ std::vector<std::shared_ptr<TagRule>> TagRule::getChildren() const
 #define __VLINEPOS	__PVEC.linePos
 #define __VPARSER	__PVEC.parser
 
-#define __WHITESPACE	std::string("\n\r\t\0 ")
+#define __WHITESPACE	std::string("\n\r\t ")
 
 typedef struct
 {
@@ -67,17 +69,17 @@ static std::string getTracebackString(__PVEC_ARG)
 	trim(src);
 	uint32_t earliest = std::max((int32_t) 0, (int32_t) __COL0 - __TB_RADIUS);
 	return std::string("--> ") + (earliest > 0 ? "..." : "") + src.substr(earliest, 2 * __TB_RADIUS)
-		+ (2 * __TB_RADIUS > src.length() - earliest ? "..." : "");
+		+ (2 * __TB_RADIUS < src.length() - earliest ? "..." : "");
 }
 
-// ! Error while parsing XML:
-// "file://src/module.xml":10:1 - Invalid token '!', expected '<'
+// ! Error while resolving modules:
+// XML Error: "file://src/module.xml":10:1 - Invalid token '!', expected '<'
 // --> !<dependencies>
 //  ^ dependency of "file://src/deps/module0.xml"
 //  ^ dependency of "file://src/deps/module1.xml"
 
-// ! Error while parsing XML:
-// "file://src/module.xml":19:1 - While parsing <dependencies...>: bundle must be a boolean value
+// ! Error while resolving modules:
+// XML Error: "file://src/module.xml":19:1 - While parsing <dependencies...>: bundle must be a boolean value
 
 // ! Could not open file: /home/maxim/project/module.xml
 //  ^ dependency of "file://src/deps/module0.xml"
@@ -110,13 +112,13 @@ namespace
 	struct outer_context_layer : public err::ErrorContextLayer
 	{
 		outer_context_layer(err::PTR_ErrorContextLayer next): ErrorContextLayer(std::move(next)) {}
-		std::string what() const override { return "Error while parsing XML:\n" + getNext()->what(); }
+		std::string what() const override { return "XML Error: " + getNext()->what(); }
 	};
 }
 
 inline static void jumpWhitespace(__PVEC_ARG)
 {
-	while(__VCHAR < __VSRC.length() && __WHITESPACE.find(__VCHAR) != std::string::npos)
+	while(__VPOS < __VSRC.length() && __WHITESPACE.find(__VCHAR) != std::string::npos)
 	{
 		if(__VCHAR == '\n')
 		{
@@ -149,7 +151,7 @@ inline static bool consumeOptional(char ch, __PVEC_ARG)
 static std::string consumeIdentifier(__PVEC_ARG)
 {
 	jumpWhitespace(__PVEC);
-	const auto first = __VCHAR;
+	auto first = __VCHAR;
 	const auto start = __VPOS;
 	
 	if((first >= 0x41 && first <= 0x5a)
@@ -163,6 +165,7 @@ static std::string consumeIdentifier(__PVEC_ARG)
 			|| first == 0x5f || first == 0x24)
 		{
 			__VPOS++;
+			first = __VCHAR;
 		}
 		
 		return __VSRC.substr(start, __VPOS - start);
@@ -208,7 +211,7 @@ static inline bool foundArgument(const std::vector<TagRule::argument_t>& argumen
 static tagoutput_t parseTag(const std::vector<std::shared_ptr<TagRule>>& rules, err::ErrorSentinel& outerSentinel, __PVEC_ARG)
 {
 	jumpWhitespace(__PVEC);
-	auto pvecCopy = __PVEC;
+	xmlparse_t pvecCopy = __PVEC;
 	
 	consume('<', __PVEC);
 	std::string header = consumeIdentifier(__PVEC);
@@ -252,8 +255,8 @@ static tagoutput_t parseTag(const std::vector<std::shared_ptr<TagRule>>& rules, 
 	}
 	
 	TagRule::childmap_t children;
-	for(std::shared_ptr<TagRule> rule : rule->getChildren())
-		children[rule->getName()];
+	for(std::shared_ptr<TagRule> childRule : rule->getChildren())
+		children[childRule->getName()];
 	
 	if(rule->getChildren().size() > 0)
 	{
@@ -273,8 +276,8 @@ static tagoutput_t parseTag(const std::vector<std::shared_ptr<TagRule>>& rules, 
 		consume('>', __PVEC);
 	}
 	
-	err::ErrorSentinel innerSentinel(&outerSentinel, err::ErrorSentinel::THROW, [header, pvecCopy](err::PTR_ErrorContextLayer ptr) {
-		return _MAKE_ERR(inner_context_layer, ptr, header, pvecCopy);
+	err::ErrorSentinel innerSentinel(&outerSentinel, err::ErrorSentinel::THROW, [header, &pvecCopy](err::PTR_ErrorContextLayer ptr) {
+		return _MAKE_ERR(inner_context_layer, std::move(ptr), header, pvecCopy);
 	});
 	return { rule->apply(*__VPARSER, arguments, children, innerSentinel), rule->getName() };
 }
@@ -296,7 +299,7 @@ std::shared_ptr<TagRule> XMLParser::getRule() const
 std::unique_ptr<XMLObject> XMLParser::build() const
 {
 	err::ErrorSentinel outerSentinel(nullptr, err::ErrorSentinel::THROW, [](err::PTR_ErrorContextLayer ptr) {
-		return _MAKE_ERR(outer_context_layer, ptr);
+		return _MAKE_ERR(outer_context_layer, std::move(ptr));
 	});
 	
 	std::unique_ptr<XMLObject> outputPtr;

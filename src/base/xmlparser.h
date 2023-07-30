@@ -35,6 +35,8 @@ namespace wckt::base
 		~XMLWrapper() override = default;
 	};
 	
+	class XMLParser;
+	
 	class TagRule
 	{
 		public:
@@ -56,12 +58,14 @@ namespace wckt::base
 		protected:
 			TagRule(const std::string& name, _VECARG(argument_t, arguments), _VECARG(std::shared_ptr<TagRule>, children));
 			
+			std::vector<std::shared_ptr<TagRule>>& _getChildren();
+			
 		public:
 			virtual ~TagRule() = default;
 			
 			std::string getName() const;
 			std::vector<argument_t> getArguments() const;
-			std::vector<std::shared_ptr<TagRule>> getChildren() const;
+			const std::vector<std::shared_ptr<TagRule>>& getChildren() const;
 			
 			virtual _APPLY_TAG_RULE() = 0;
 	};

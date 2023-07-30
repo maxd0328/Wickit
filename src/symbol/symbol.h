@@ -1,12 +1,11 @@
 #pragma once
 
 #include "include/definitions.h"
+#include "include/exception.h"
+#include "symbol/locator.h"
 
 namespace wckt::sym
 {
-	// Forward declaration, refer to locator.h //
-	class Locator;
-
 	class SymbolResolutionError : public APIError
 	{
 		public:
@@ -42,24 +41,26 @@ namespace wckt::sym
 			virtual ~Symbol() = default;
 			
 			Locator getLocator() const;
-
+			
+			virtual std::unique_ptr<Symbol> clone() const;
+			
 			template<typename _Ty>
 			static _Ty& assertSymbol(Symbol& symbol, const std::string& msg)
 			{ if(_Ty* _this = dynamic_cast<_Ty*>(&symbol)) return *_this;
-			else throw SymbolResolutionError(SymbolResolutionError::WRONG_TYPE, msg, symbol.getLocator()) }
+			else throw SymbolResolutionError(SymbolResolutionError::WRONG_TYPE, msg, symbol.getLocator()); }
 			template<typename _Ty>
 			static const _Ty& assertSymbol(const Symbol& symbol, const std::string& msg)
 			{ if(const _Ty* _this = dynamic_cast<const _Ty*>(&symbol)) return *_this;
-			else throw SymbolResolutionError(SymbolResolutionError::WRONG_TYPE, msg, symbol.getLocator()) }
+			else throw SymbolResolutionError(SymbolResolutionError::WRONG_TYPE, msg, symbol.getLocator()); }
 
 			friend class Namespace;
 	};
 	
 	#define __ASSERT_SYMBOL__(_Ty, _M)								\
 		static inline _Ty& assertSymbol(Symbol& symbol)				\
-		{ Symbol::assertSymbol<_Ty>(symbol, _M); }					\
+		{ return Symbol::assertSymbol<_Ty>(symbol, _M); }			\
 		static inline const _Ty& assertSymbol(const Symbol& symbol)	\
-		{ Symbol::assertSymbol<_Ty>(symbol, _M); }
+		{ return Symbol::assertSymbol<_Ty>(symbol, _M); }
 
 	class ReferenceSymbol : public Symbol
 	{
@@ -71,6 +72,8 @@ namespace wckt::sym
 			~ReferenceSymbol() override = default;
 
 			Locator getTarget() const;
+			
+			std::unique_ptr<Symbol> clone() const override;
 
 			__ASSERT_SYMBOL__(ReferenceSymbol, "Not a reference symbol")
 	};
@@ -83,7 +86,10 @@ namespace wckt::sym
 		public:
 			Namespace();
 			Namespace(ARG_moduleid_t moduleID);
+			Namespace(const Namespace& src);
 			~Namespace() override = default;
+			
+			Namespace& operator=(const Namespace& src);
 			
 			const std::map<std::string, std::unique_ptr<Symbol>>& getSymbols() const;
 
@@ -93,6 +99,8 @@ namespace wckt::sym
 			
 			void declareSymbol(const std::string& name, std::unique_ptr<Symbol> symbol);
 			void undeclareSymbol(const std::string& name);
+			
+			std::unique_ptr<Symbol> clone() const override;
 
 			__ASSERT_SYMBOL__(Namespace, "Not a namespace");
 	};

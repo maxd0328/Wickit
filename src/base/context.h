@@ -1,17 +1,11 @@
 #pragma once
 
-#define __CTX_CONST		const wckt::base::EngineContext&
-#define __CTX			wckt::base::EngineContext&
-
-namespace wckt::base
-{
-	class EngineContext;
-}
-
 #include "include/definitions.h"
 #include "base/modules/module.h"
 #include "base/modules/xmlrules.h"
 #include "symbol/symbol.h"
+
+#include "base/context_incl.h"
 
 namespace wckt::base
 {

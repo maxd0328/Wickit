@@ -1,7 +1,7 @@
 #pragma once
 
 #include "include/definitions.h"
-#include "base/context.h"
+#include "base/context_incl.h"
 
 namespace wckt::sym
 {

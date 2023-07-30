@@ -83,6 +83,11 @@ URL BuildComponent::getMountPoint(const sym::Locator& location) const
 	return this->mountPoints.at(location);
 }
 
+std::unique_ptr<ModuleComponent> BuildComponent::clone() const
+{
+	return std::make_unique<BuildComponent>(*this);
+}
+
 EntryComponent::EntryComponent(const sym::Locator& locator)
 {
 	this->locator = locator;
@@ -93,12 +98,39 @@ sym::Locator EntryComponent::getLocator() const
 	return this->locator;
 }
 
+std::unique_ptr<ModuleComponent> EntryComponent::clone() const
+{
+	return std::make_unique<EntryComponent>(*this);
+}
+
 Module::Module(const URL& modulefile, const std::vector<ModuleDependency>& dependencies, const Package& rootPackage,
 	const std::map<std::string, std::unique_ptr<ModuleComponent>>& components)
-: XMLObject(), modulefile(modulefile), rootPackage(rootPackage)
+: XMLObject(), modulefile(modulefile), dependencies(dependencies), rootPackage(rootPackage)
 {
-	this->dependencies = dependencies;
-	this->components = components;
+	for(const auto& entry : components)
+		this->components.insert(std::pair(entry.first, entry.second->clone()));
+}
+
+Module::Module(const Module& src)
+: XMLObject(src), modulefile(src.modulefile), dependencies(src.dependencies), rootPackage(src.rootPackage)
+{
+	for(const auto& entry : src.components)
+		this->components.insert(std::pair(entry.first, entry.second->clone()));
+}
+
+Module& Module::operator=(const Module& src)
+{
+	if(&src == this)
+		return *this;
+	
+	XMLObject::operator=(src);
+	this->modulefile = src.modulefile;
+	this->rootPackage = src.rootPackage;
+	this->dependencies = src.dependencies;
+	this->components.clear();
+	for(const auto& entry : src.components)
+		this->components.insert(std::pair(entry.first, entry.second->clone()));
+	return *this;
 }
 
 URL Module::getModulefile() const

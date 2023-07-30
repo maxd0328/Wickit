@@ -5,11 +5,14 @@
 
 #define MODXML_MAKERULE(_Name)	struct _Name : public TagRule					\
 								{												\
-									static const std::shared_ptr<_Name> PTR;	\
+									static std::shared_ptr<_Name> ptr();		\
 									_Name();									\
 									_APPLY_TAG_RULE() override;					\
 								};
-#define MODXML_IMPLRULE(_Name, _Str, _Args, _Chld)	const std::shared_ptr<_Name> _Name::PTR = std::make_shared<_Name>(); \
+#define MODXML_IMPLRULE(_Name, _Str, _Args, _Chld, _Action)											\
+													std::shared_ptr<_Name> _Name::ptr()				\
+													{ static auto ptr {std::make_shared<_Name>()};	\
+													  _Action; return ptr; }						\
 													_Name::_Name(): TagRule(_Str, _Args, _Chld) {}
 
 namespace wckt::base
@@ -29,7 +32,7 @@ namespace wckt::base
 	class ModuleBuilder : public TagRule
 		{
 			public:
-				static const std::shared_ptr<ModuleBuilder> DEFAULT;
+				static std::shared_ptr<ModuleBuilder> standard();
 				
 				ModuleBuilder(_VECARG(std::shared_ptr<TagRule>, componentRules));
 				~ModuleBuilder() = default;

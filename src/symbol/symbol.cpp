@@ -11,6 +11,11 @@ Locator Symbol::getLocator() const
     return this->locator;
 }
 
+std::unique_ptr<Symbol> Symbol::clone() const
+{
+	return std::make_unique<Symbol>(*this);
+}
+
 ReferenceSymbol::ReferenceSymbol(const Locator& target)
 : target(target)
 {}
@@ -18,6 +23,11 @@ ReferenceSymbol::ReferenceSymbol(const Locator& target)
 Locator ReferenceSymbol::getTarget() const
 {
     return this->target;
+}
+
+std::unique_ptr<Symbol> ReferenceSymbol::clone() const
+{
+	return std::make_unique<ReferenceSymbol>(*this);
 }
 
 Namespace::Namespace()
@@ -28,6 +38,25 @@ Namespace::Namespace(ARG_moduleid_t moduleID)
 : Symbol()
 {
 	this->locator = Locator(moduleID);
+}
+
+Namespace::Namespace(const Namespace& src)
+: Symbol(src)
+{
+	for(const auto& entry : src.symbols)
+		this->symbols.insert(std::pair(entry.first, entry.second->clone()));
+}
+
+Namespace& Namespace::operator=(const Namespace& src)
+{
+	if(&src == this)
+		return *this;
+	
+	Symbol::operator=(src);
+	this->symbols.clear();
+	for(const auto& entry : src.symbols)
+		this->symbols.insert(std::pair(entry.first, entry.second->clone()));
+	return *this;
 }
 
 const std::map<std::string, std::unique_ptr<Symbol>>& Namespace::getSymbols() const
@@ -67,6 +96,11 @@ void Namespace::undeclareSymbol(const std::string& name)
     if(!isDeclared(name))
         throw SymbolResolutionError(SymbolResolutionError::NOT_FOUND, this->locator + name);
     this->symbols.erase(name);
+}
+
+std::unique_ptr<Symbol> Namespace::clone() const
+{
+	return std::make_unique<Namespace>(*this);
 }
 
 std::string SymbolResolutionError::getErrorMessage(ErrorType type)

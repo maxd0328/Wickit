@@ -4,3 +4,6 @@ build/
 
 # Ignore environment configs
 .vscode/
+
+# Ignore Wickit testing files
+test/

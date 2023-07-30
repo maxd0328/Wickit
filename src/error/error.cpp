@@ -20,9 +20,12 @@ std::string StandardError::what() const
 	return this->message;
 }
 
-ErrorPackage::ErrorPackage(const std::vector<PTR_ErrorContextLayer>& errors)
-: ErrorContextLayer(nullptr), errors(errors)
-{}
+ErrorPackage::ErrorPackage(std::vector<PTR_ErrorContextLayer>& errors)
+: ErrorContextLayer(nullptr)
+{
+	for(auto& error : errors)
+		this->errors.push_back(std::move(error));
+}
 
 const std::vector<PTR_ErrorContextLayer>& ErrorPackage::getErrors() const
 {
@@ -136,7 +139,7 @@ void ErrorSentinel::raise(PTR_ErrorContextLayer error)
 					throw WickitError(this->guardctr ? std::move(pckg->errors[0]) : contextFunction(std::move(pckg->errors[0])));
 				return;
 			case IGNORE:
-			default:
+			default: ;
 		}
 	}
 	else
@@ -149,7 +152,7 @@ void ErrorSentinel::raise(PTR_ErrorContextLayer error)
 			case THROW:
 				throw WickitError(this->guardctr ? std::move(error) : contextFunction(std::move(error)));
 			case IGNORE:
-			default:
+			default: ;
 		}
 	}
 }

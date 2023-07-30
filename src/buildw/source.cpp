@@ -37,7 +37,7 @@ SourceTable::coords1_t SourceTable::getCoords(size_t pos) const
 	if(pos >= this->source.size())
 	{
 		pair_t last = this->lines[this->lines.size() - 1];
-		return { last.row + 1, this->lines.size() - last.pos + 1 };
+		return { last.row + 1, (uint32_t) (this->lines.size() - last.pos + 1) };
 	}
 	
 	size_t lo = 0, hi = this->source.size() - 1;
@@ -47,7 +47,7 @@ SourceTable::coords1_t SourceTable::getCoords(size_t pos) const
 		size_t index = (lo + hi) / 2;
 		pair_t cur = this->lines[index], next = this->lines[index + 1];
 		if(cur.pos <= pos && next.pos > pos)
-			return { cur.row + 1, pos - cur.pos + 1 };
+			return { cur.row + 1, (uint32_t) (pos - cur.pos + 1) };
 		else if(pos == next.pos)
 			return { next.row + 1, 1 };
 		
@@ -58,7 +58,7 @@ SourceTable::coords1_t SourceTable::getCoords(size_t pos) const
 	}
 	
 	pair_t pair = this->lines[lo];
-	return { pair.row + 1, pos - pair.pos + 1 };
+	return { pair.row + 1, (uint32_t) (pos - pair.pos + 1) };
 }
 
 std::string SourceTable::getLine(uint32_t row) const

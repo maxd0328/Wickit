@@ -11,6 +11,28 @@ BuildContext::BuildContext(std::shared_ptr<base::EngineContext> context, ARG_mod
 : context(context), moduleID(moduleID), nextAssetID(0)
 {}
 
+BuildContext::BuildContext(const BuildContext& src)
+: context(src.context), moduleID(src.moduleID), assets(src.assets), nextAssetID(src.nextAssetID)
+{
+	for(const auto& entry : src.buildInfo)
+		this->buildInfo.insert(std::pair(entry.first, std::make_unique<build_info_t>(*entry.second)));
+}
+
+BuildContext& BuildContext::operator=(const BuildContext& src)
+{
+	if(&src == this)
+		return *this;
+	
+	this->context = src.context;
+	this->moduleID = src.moduleID;
+	this->nextAssetID = src.nextAssetID;
+	this->assets = src.assets;
+	this->buildInfo.clear();
+	for(const auto& entry : src.buildInfo)
+		this->buildInfo.insert(std::pair(entry.first, std::make_unique<build_info_t>(*entry.second)));
+	return *this;
+}
+
 const base::EngineContext& BuildContext::getContext() const
 {
 	return *this->context;

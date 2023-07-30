@@ -52,6 +52,8 @@ namespace wckt::base
 	{
 		public:
 			virtual ~ModuleComponent() = default;
+			
+			virtual std::unique_ptr<ModuleComponent> clone() const = 0;
 			// Will likely be extended as the language grows
 	};
 	
@@ -67,6 +69,8 @@ namespace wckt::base
 			
 			const std::map<sym::Locator, URL>& getMountPoints() const;
 			URL getMountPoint(const sym::Locator& location) const;
+			
+			std::unique_ptr<ModuleComponent> clone() const override;
 	};
 	
 	class EntryComponent : public ModuleComponent
@@ -79,6 +83,8 @@ namespace wckt::base
 			~EntryComponent() override = default;
 			
 			sym::Locator getLocator() const;
+			
+			std::unique_ptr<ModuleComponent> clone() const override;
 	};
 	
     class Module : public XMLObject
@@ -92,7 +98,10 @@ namespace wckt::base
         public:
             Module(const URL& modulefile, _VECARG(ModuleDependency, dependencies), const Package& rootPackage = Package(),
 				_MAPARG(std::string, std::unique_ptr<ModuleComponent>, components));
+			Module(const Module& src);
 			~Module() = default;
+			
+			Module& operator=(const Module& src);
 			
 			URL getModulefile() const;
 			const std::vector<ModuleDependency>& getDependencies() const;
