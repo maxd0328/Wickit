@@ -25,6 +25,20 @@ namespace wckt::err
 			virtual std::string what() const = 0;
 	};
 	
+	#define BASIC_CONTEXT_LAYER(_Name, _Str)				\
+		struct _Name : public wckt::err::ErrorContextLayer	\
+		{													\
+			_Name(wckt::err::PTR_ErrorContextLayer next)	\
+			: ErrorContextLayer(std::move(next))			\
+			{}												\
+			std::string what() const override				\
+			{ return _Str + this->getNext()->what(); }		\
+		};
+	
+	#define USE_BASIC_CONTEXT_LAYER(_Name)					\
+		[](wckt::err::PTR_ErrorContextLayer ptr)			\
+		{ return _MAKE_ERR(_Name, ptr); }		
+	
 	class StandardError : public ErrorContextLayer
 	{
 		private:
@@ -70,6 +84,15 @@ namespace wckt::err
 	#define _MAKE_STD_ERR(_Msg)			std::make_unique<wckt::err::StandardError>(std::string(_Msg))
 	#define _MAKE_ERR(_Class, _Args...)	std::make_unique<_Class>(_Args)
 	
+	class GuardCounter
+	{
+		private:
+			uint32_t& ctr;
+		public:
+			GuardCounter(uint32_t& ctr);
+			~GuardCounter();
+	};
+	
 	/**
 	 * Error Sentinel Rules:
 	 * 
@@ -105,6 +128,8 @@ namespace wckt::err
 			std::vector<PTR_ErrorContextLayer> errors;
 			errctx_fn_t contextFunction;
 			
+			uint32_t guardctr;
+			
 		public:
 			ErrorSentinel(behavior_t behavior, const errctx_fn_t& contextFunction);
 			ErrorSentinel(ErrorSentinel* prev, behavior_t behavior, const errctx_fn_t& contextFunction);
@@ -114,6 +139,8 @@ namespace wckt::err
 			behavior_t getBehavior() const;
 			const std::vector<PTR_ErrorContextLayer>& getErrors() const;
 			errctx_fn_t getContextFunction() const;
+			
+			bool hasErrors() const;
 			
 			void raise(PTR_ErrorContextLayer error);
 			void raise(const APIError& error);
@@ -125,29 +152,15 @@ namespace wckt::err
 			}
 			
 			template<typename _Exc = APIError>
-			bool guard(const std::function<void(const ErrorSentinel&)>& fn,
-				const std::function<void(const _Exc&)>& onExc = nullptr) const
-			{
-				try { fn(*this); return true; }
-				catch(const _Exc& e)
-				{
-					if(onExc)
-						onExc(e);
-					raise(e);
-					return false;
-				}
-				catch(WickitError& e)
-				{
-					raise(e.releaseTop());
-					return false;
-				}
-			}
-			
-			template<typename _Exc = APIError>
 			bool guard(const std::function<void(ErrorSentinel&)>& fn,
 				const std::function<void(const _Exc&)>& onExc = nullptr)
 			{
-				try { fn(*this); return true; }
+				try
+				{
+					{ GuardCounter __counter(this->guardctr);
+					  fn(*this); }
+					return true;
+				}
 				catch(const _Exc& e)
 				{
 					if(onExc)

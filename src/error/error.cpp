@@ -65,6 +65,17 @@ const char* WickitError::what() const noexcept
 	return this->top->what().c_str();
 }
 
+GuardCounter::GuardCounter(uint32_t& ctr)
+: ctr(ctr)
+{
+	ctr++;
+}
+
+GuardCounter::~GuardCounter()
+{
+	ctr--;
+}
+
 ErrorSentinel::no_except::no_except(): APIError("")
 {}
 
@@ -73,11 +84,11 @@ ErrorSentinel::errctx_fn_t ErrorSentinel::NO_CONTEXT_FN = [](PTR_ErrorContextLay
 };
 
 ErrorSentinel::ErrorSentinel(behavior_t behavior, const errctx_fn_t& contextFunction)
-: prev(nullptr), behavior(behavior), contextFunction(contextFunction)
+: prev(nullptr), behavior(behavior), contextFunction(contextFunction), guardctr(0)
 {}
 
 ErrorSentinel::ErrorSentinel(ErrorSentinel* prev, behavior_t behavior, const errctx_fn_t& contextFunction)
-: prev(prev), behavior(behavior), contextFunction(contextFunction)
+: prev(prev), behavior(behavior), contextFunction(contextFunction), guardctr(0)
 {}
 
 ErrorSentinel::~ErrorSentinel()
@@ -105,6 +116,11 @@ ErrorSentinel::errctx_fn_t ErrorSentinel::getContextFunction() const
 	return this->contextFunction;
 }
 
+bool ErrorSentinel::hasErrors() const
+{
+	return !this->errors.empty();
+}
+
 void ErrorSentinel::raise(PTR_ErrorContextLayer error)
 {
 	if(ErrorPackage* pckg = dynamic_cast<ErrorPackage*>(error.get()))
@@ -112,11 +128,12 @@ void ErrorSentinel::raise(PTR_ErrorContextLayer error)
 		switch(this->behavior)
 		{
 			case COLLECT:
-				this->errors.insert(this->errors.end(), pckg->errors.begin(), pckg->errors.end());
+				for(auto& err : pckg->errors)
+					this->errors.push_back(this->guardctr ? std::move(err) : contextFunction(std::move(err)));
 				return;
 			case THROW:
 				if(!pckg->errors.empty())
-					throw WickitError(contextFunction(std::move(pckg->errors[0])));
+					throw WickitError(this->guardctr ? std::move(pckg->errors[0]) : contextFunction(std::move(pckg->errors[0])));
 				return;
 			case IGNORE:
 			default:
@@ -127,10 +144,10 @@ void ErrorSentinel::raise(PTR_ErrorContextLayer error)
 		switch(this->behavior)
 		{
 			case COLLECT:
-				this->errors.push_back(contextFunction(std::move(error)));
+				this->errors.push_back(this->guardctr ? std::move(error) : contextFunction(std::move(error)));
 				return;
 			case THROW:
-				throw WickitError(contextFunction(std::move(error)));
+				throw WickitError(this->guardctr ? std::move(error) : contextFunction(std::move(error)));
 			case IGNORE:
 			default:
 		}

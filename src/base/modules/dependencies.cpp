@@ -69,7 +69,7 @@ DependencyResolver::DependencyResolver(const URL& moduleURL, const modgenfunc_t&
 		this->moduleRegistry[moduleURL] = module;
 		resolveDependencies(module, this->moduleRegistry, genfunc);
 	}
-	catch(err::ErrorWrapper& e) { sentinel.raise(e.releaseTop()); }
+	catch(err::WickitError& e) { sentinel.raise(e.releaseTop()); }
 	catch(const IOError& e) { sentinel.raise(e); }
 }
 

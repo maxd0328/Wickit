@@ -40,7 +40,7 @@ namespace wckt::base
     class EngineContext
     {
         private:
-			moduleid_t contextID;
+			uint32_t contextID;
 			std::map<moduleid_t, RuntimeModule> registeredModules;
 			std::unordered_map<URL, moduleid_t, URL::hasher_t> moduleFinder;
 			

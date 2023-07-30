@@ -12,7 +12,7 @@ namespace wckt::base
 			static std::map<uint32_t, std::shared_ptr<EngineContext>> contexts;
 			
 		public:
-			static void startInstance(std::shared_ptr<EngineContext> context);
+			static const Engine& startInstance(std::shared_ptr<EngineContext> context);
 			
 			static const Engine& getInstance(uint32_t contextID);
 			static const Engine& getInstance(const EngineContext& context);

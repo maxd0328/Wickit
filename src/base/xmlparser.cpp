@@ -52,9 +52,12 @@ typedef struct
 	std::string tagName;
 } tagoutput_t;
 
+#define __COL0		( __VPOS - __VLINEPOS )
+#define __TB_RADIUS	((int32_t) 32)
+
 static std::string getLocatorString(__PVEC_ARG)
 {
-	return "\"" + __VPARSER->getURL()->toString() + "\":" + std::to_string(__VLINENO) + ":" + std::to_string(__VPOS - __VLINEPOS + 1);
+	return "\"" + __VPARSER->getURL()->toString() + "\":" + std::to_string(__VLINENO) + ":" + std::to_string(__COL0 + 1);
 }
 
 static std::string getTracebackString(__PVEC_ARG)
@@ -62,7 +65,9 @@ static std::string getTracebackString(__PVEC_ARG)
 	uint32_t endIndex = __VSRC.find('\n', __VLINEPOS);
 	std::string src = endIndex != std::string::npos ? __VSRC.substr(__VLINEPOS, endIndex - __VLINEPOS) : __VSRC.substr(__VLINEPOS);
 	trim(src);
-	return "--> " + src;
+	uint32_t earliest = std::max((int32_t) 0, (int32_t) __COL0 - __TB_RADIUS);
+	return std::string("--> ") + (earliest > 0 ? "..." : "") + src.substr(earliest, 2 * __TB_RADIUS)
+		+ (2 * __TB_RADIUS > src.length() - earliest ? "..." : "");
 }
 
 // ! Error while parsing XML:
@@ -112,7 +117,14 @@ namespace
 inline static void jumpWhitespace(__PVEC_ARG)
 {
 	while(__VCHAR < __VSRC.length() && __WHITESPACE.find(__VCHAR) != std::string::npos)
+	{
+		if(__VCHAR == '\n')
+		{
+			__VLINENO++;
+			__VLINEPOS = __VPOS + 1;
+		}
 		__VPOS++;
+	}
 }
 
 inline static void consume(char ch, __PVEC_ARG)

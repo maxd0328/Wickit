@@ -2,11 +2,15 @@
 #include "base/engine.h"
 #include "base/modules/dependencies.h"
 #include "error/error.h"
+#include "buildw/build.h"
 
 using namespace wckt;
 using namespace wckt::base;
 
-void quit(err::ErrorSentinel& sentinel)
+namespace
+{ BASIC_CONTEXT_LAYER(LoadingModuleContextLayer, "Error while resolving modules:\n"); }
+
+static void quit(err::ErrorSentinel& sentinel)
 {
 	if(!sentinel.getErrors().empty())
 	{
@@ -18,33 +22,39 @@ void quit(err::ErrorSentinel& sentinel)
 	else exit(0);
 }
 
-int main()
+static void loadModules(const URL& url, std::shared_ptr<EngineContext> context)
 {
-    std::shared_ptr<EngineContext> context = std::make_shared<EngineContext>();
-	Engine::startInstance(context);
-	
-	err::ErrorSentinel sentinel(nullptr, err::ErrorSentinel::COLLECT, err::ErrorSentinel::NO_CONTEXT_FN);
-	bool success;
+	err::ErrorSentinel sentinel(err::ErrorSentinel::THROW, USE_BASIC_CONTEXT_LAYER(LoadingModuleContextLayer));
 	
 	std::vector<std::shared_ptr<Module>> modules;
-	success = sentinel.guard<CyclicDependencyError>([&modules](err::ErrorSentinel&) {
-		DependencyResolver resolver(URL("file://test/module.xml"));
+	sentinel.guard<CyclicDependencyError>([&modules, &url](err::ErrorSentinel&) {
+		DependencyResolver resolver(url);
 		modules = resolver.computeTopologicalOrder();
 	});
-	if(!success)
-		quit(sentinel);
 
 	for(std::shared_ptr<Module> module : modules)
 	{
 		moduleid_t moduleID = context->registerModule(module);
-		success = sentinel.guard<sym::SymbolResolutionError>([context, moduleID](err::ErrorSentinel&) {
+		sentinel.guard<sym::SymbolResolutionError>([context, moduleID](err::ErrorSentinel&) {
 			context->getModule(moduleID).declareAllInOrder();
 		});
-		if(!success)
-			quit(sentinel);
 	}
+}
 
-	// ...
+int main()
+{
+    std::shared_ptr<EngineContext> context = std::make_shared<EngineContext>();
+	err::ErrorSentinel sentinel(err::ErrorSentinel::COLLECT, err::ErrorSentinel::NO_CONTEXT_FN);
 	
-	Engine::terminateAllInstances();
+	sentinel.guard<err::ErrorSentinel::no_except>([context](err::ErrorSentinel&) {
+		loadModules(URL("file://test/module.xml"), context);
+	});
+	if(sentinel.hasErrors())
+		quit(sentinel);
+	
+	build::BuildContext buildContext(context, context->findModuleID(URL("file://test/module.xml")));
+	build::services::buildFromContext(buildContext, &sentinel);
+	
+	if(sentinel.hasErrors())
+		quit(sentinel);
 }
