@@ -31,7 +31,7 @@ using namespace wckt::build;
 			_Macro(FLOAT_LITERAL, "(\\d*\\.\\d+|\\d+\\.)[fd]?")												\
 			_Macro(CHARACTER_LITERAL, "\'.*\'")																\
 			_Macro(STRING_LITERAL, "\".*\"")																\
-			_Macro(IDENTIFIER, "[A_Za-z$_][A_Za-z0-9$_]*")
+			_Macro(IDENTIFIER, "[A-Za-z$_][A-Za-z0-9$_]*")
 
 __GET_CLASS_NAME(__CLASSES)
 __REGEXPS(__CLASSES)
@@ -57,7 +57,7 @@ size_t Token::getPosition() const
 
 std::string Token::toString() const
 {
-	return "[" + getClassName(this->_class) + " \"" + this->value + "\"]";
+	return "[" + getClassName(this->_class) + " " + this->value + "]";
 }
 
 namespace
@@ -80,7 +80,7 @@ namespace
 
 #define _WHITESPACE(ch)		( std::string("\n\r\t ").find(ch) != std::string::npos )
 #define _ALPHANUMERIC(ch)	( (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_' || ch == '$' )
-#define _SYMBOLIC(ch)		( std::string("~!@%^&*()-=+[]{}|;:,<.>/?").find(ch) != std::string::npos )
+#define _SYMBOLIC(ch)		( std::string("~!@%^&*()-=+[]{}|;:,<>/?").find(ch) != std::string::npos )
 
 static inline void jumpWhitespace(_IVEC_ARG)
 {
@@ -116,7 +116,7 @@ static size_t nextLongest(err::ErrorSentinel& sentinel, char& repairChar, _IVEC_
 		bool escape = false;
 		for(_IPOS++ ;; _IPOS++)
 		{
-			if(_IPOS >= _ISRC.length() || _IPOS == '\n')
+			if(_IPOS >= _ISRC.length() || _ICHAR == '\n')
 			{
 				sentinel.raise(_MAKE_STD_ERR(ch == '\'' ? "Unterminated character literal" : "Unterminated string literal"));
 				repairChar = ch;
@@ -165,7 +165,7 @@ static void findLongestMatch(Token::class_t& _class, size_t& len, err::ErrorSent
 	{
 		std::smatch match;
 		std::regex regex(entry.second);
-		if(std::regex_search(token, match, regex, std::regex_constants::match_continuous) && match.length() > maxMatch.length())
+		if(std::regex_search(token, match, regex, std::regex_constants::match_continuous) && (_class == Token::__END__ || match.length() > maxMatch.length()))
 		{
 			maxMatch = match;
 			_class = entry.first;
@@ -214,13 +214,17 @@ static void nextReal(err::ErrorSentinel& parentSentinel, _IVEC_ARG)
 		}
 		else if(_class == Token::COMMENT_MULTILINE)
 		{
+			auto start = _IPOS;
 			_IPOS += len;
 			bool ready = false;
 			for(;; _IPOS++)
 			{
 				if(_IPOS >= _ISRC.length())
 				{
+					auto tmp = _IPOS;
+					_IPOS = start;
 					outerSentinel.raise(_MAKE_STD_ERR("Unterminated multiline comment"));
+					_IPOS = tmp;
 					return;
 				}
 				else if(_ICHAR == '*')
@@ -234,7 +238,7 @@ static void nextReal(err::ErrorSentinel& parentSentinel, _IVEC_ARG)
 			}
 		}
 		
-		Token token(_class, _ISRC.substr(_IPOS, len), _IPOS);
+		Token token(_class, _ISRC.substr(_IPOS, len) + (repairChar ? std::string(1, repairChar) : ""), _IPOS);
 		_IBINFO.tokenSequence->push_back(token);
 	}
 	_IPOS += len;

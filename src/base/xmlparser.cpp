@@ -262,10 +262,10 @@ static tagoutput_t parseTag(const std::vector<std::shared_ptr<TagRule>>& rules, 
 	{
 		for(;;)
 		{
-			const auto tmpPos = __VPOS;
+			const auto tmp = __PVEC;
 			if(consumeOptional('<', __PVEC) && consumeOptional('/', __PVEC))
 				break;
-			__VPOS = tmpPos;
+			__PVEC = tmp;
 			
 			tagoutput_t output = parseTag(rule->getChildren(), outerSentinel, __PVEC);
 			children[output.tagName].push_back(std::move(output.object));

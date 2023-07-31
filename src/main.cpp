@@ -35,7 +35,7 @@ static void loadModules(const URL& url, std::shared_ptr<EngineContext> context)
 
 	for(std::shared_ptr<Module> module : modules)
 	{
-		moduleid_t moduleID = context->registerModule(module);
+		moduleid_t moduleID = context->unpackModule(module);
 		sentinel.guard<sym::SymbolResolutionError>([context, moduleID](err::ErrorSentinel&) {
 			context->getModule(moduleID).declareAllInOrder();
 		});
@@ -54,6 +54,8 @@ int main()
 		quit(sentinel);
 	
 	build::BuildContext buildContext(context, context->findModuleID(URL("file://test/module.xml")));
+	buildContext.addAsset(context->getModule(buildContext.getModuleID())
+		.getSource()->getRootPackage().getChildren()[0].getAssets()[0], std::string("test"));
 	build::services::buildFromContext(buildContext, &sentinel);
 	
 	if(sentinel.hasErrors())

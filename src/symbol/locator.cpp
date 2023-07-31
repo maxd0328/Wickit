@@ -39,7 +39,7 @@ Locator::Locator(ARG_moduleid_t moduleID, const std::string& signature)
 : moduleID(moduleID)
 {
     std::string cur = signature;
-    uint32_t pos;
+    size_t pos;
     
     while((pos = cur.find('.')) != std::string::npos)
     {
@@ -92,7 +92,7 @@ namespace
 		__Ts& operator()(const std::vector<std::string>& pckgs, ARG_moduleid_t moduleID, __Tc& context)
 		{
 			// Get the static space of that module
-			__Ts* symbol = &context.getModule(moduleID).getStaticSpace();
+			__Ts* symbol = &context.getModule(moduleID).getSymbolTable();
 			for(const auto& pckg : pckgs)
 			{
 				// When there's another symbol to navigate to, we ensure the parent symbol is a namespace
@@ -139,6 +139,9 @@ Symbol& Locator::locateOrDeclare(__CTX context) const
 
 std::string Locator::toString() const
 {
+	if(this->pckgs.empty())
+		return "<root>";
+	
     std::stringstream stream;
     for(const auto& pckg : this->pckgs)
     {

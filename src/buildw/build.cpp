@@ -86,7 +86,7 @@ build_info_t& BuildContext::getBuildInfo(uint32_t assetID) const
 
 uint32_t BuildContext::addAsset(const base::URL& url, const sym::Locator& pckg)
 {
-	if(findAssetID(url))
+	if(findAssetID(url) != npos)
 		throw BadArgumentError("Asset with this URL already exists");
 	
 	uint32_t assetID = nextAssetID++;
@@ -103,13 +103,18 @@ void services::buildFromContext(const BuildContext& context, err::ErrorSentinel*
 	{
 		asset_info_t asset = context.getAsset(assetID);
 		build_info_t& buildInfo = context.getBuildInfo(assetID);
-		
-		buildInfo.sourceTable = std::make_shared<SourceTable>(asset.url);
-		
 		err::ErrorSentinel sentinel(parentSentinel, err::ErrorSentinel::COLLECT, err::ErrorSentinel::NO_CONTEXT_FN);
+		
+		sentinel.guard<IOError>([&buildInfo, &asset](err::ErrorSentinel&) {
+			buildInfo.sourceTable = std::make_shared<SourceTable>(asset.url);
+		});
+		if(sentinel.hasErrors())
+			continue;
 		
 		services::tokenize(buildInfo, &sentinel);
 		
+		for(const auto& token : *buildInfo.tokenSequence)
+			std::cout << token.toString() << std::endl;
 		// ...
 	}
 }

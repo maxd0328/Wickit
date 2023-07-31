@@ -46,6 +46,9 @@ namespace
 			if(parent != nullptr && parent->getProtocol() == URL::FILE_PROTOCOL)
 			{
 				std::filesystem::path parentSourcepath = parent->getSource();
+				if(!std::filesystem::is_directory(parentSourcepath))
+					parentSourcepath = parentSourcepath.parent_path();
+				
 				sourcepath = parentSourcepath / sourcepath;
 			}
 			return sourcepath;

@@ -11,25 +11,25 @@ static inline void ensureNotNpos(ARG_moduleid_t id)
 		throw BadArgumentError("NPOS is not a valid module ID");
 }
 
-RuntimeModule::RuntimeModule(EngineContext* context, std::shared_ptr<Module> source, moduleid_t moduleID)
-: context(context), staticSpace(moduleID)
+UnpackedModule::UnpackedModule(EngineContext* context, std::shared_ptr<Module> source, moduleid_t moduleID)
+: context(context), symbolTable(moduleID)
 {
 	this->source = source;
 }
 
-std::shared_ptr<Module> RuntimeModule::getSource() const
+std::shared_ptr<Module> UnpackedModule::getSource() const
 {
 	return this->source;
 }
 
-const sym::Namespace& RuntimeModule::getStaticSpace() const
+const sym::Namespace& UnpackedModule::getSymbolTable() const
 {
-	return this->staticSpace;
+	return this->symbolTable;
 }
 
-sym::Namespace& RuntimeModule::getStaticSpace()
+sym::Namespace& UnpackedModule::getSymbolTable()
 {
-	return this->staticSpace;
+	return this->symbolTable;
 }
 
 static void declarePackage(sym::Namespace& _namespace, const Package& package)
@@ -40,12 +40,13 @@ static void declarePackage(sym::Namespace& _namespace, const Package& package)
 	_namespace.declareSymbol(package.getName(), std::unique_ptr<sym::Symbol>(newNamespace.release()));
 }
 
-void RuntimeModule::declarePackages()
+void UnpackedModule::declarePackages()
 {
-	declarePackage(this->staticSpace, this->source->getRootPackage());
+	for(const auto& package : this->source->getRootPackage().getChildren())
+		declarePackage(this->symbolTable, package);
 }
 
-void RuntimeModule::declareDependencies()
+void UnpackedModule::declareDependencies()
 {
 	for(const auto& dep : this->source->getDependencies())
 	{
@@ -63,7 +64,7 @@ void RuntimeModule::declareDependencies()
 	}
 }
 
-void RuntimeModule::declareAllInOrder()
+void UnpackedModule::declareAllInOrder()
 {
 	declarePackages();
 	declareDependencies();
@@ -81,40 +82,40 @@ uint32_t EngineContext::getContextID() const
 	return this->contextID;
 }
 
-uint32_t EngineContext::registerModule(std::shared_ptr<Module> module)
+uint32_t EngineContext::unpackModule(std::shared_ptr<Module> module)
 {
-	if(isModuleRegistered(module->getModulefile()))
+	if(hasModule(module->getModulefile()))
 		throw BadStateError("Module is already registered");
 	
 	moduleid_t moduleID = this->nextModuleID++;
 
-	this->registeredModules.insert(std::pair(moduleID, RuntimeModule(this, module, moduleID)));
+	this->registeredModules.insert(std::pair(moduleID, UnpackedModule(this, module, moduleID)));
 	this->moduleFinder.insert(std::pair(module->getModulefile(), moduleID));
 	
 	return moduleID;
 }
 
-void EngineContext::unregisterModule(ARG_moduleid_t moduleID)
+void EngineContext::deleteModule(ARG_moduleid_t moduleID)
 {
-	RuntimeModule& module = getModule(moduleID);
+	UnpackedModule& module = getModule(moduleID);
 	this->registeredModules.erase(moduleID);
 	this->moduleFinder.erase(module.getSource()->getModulefile());
 }
 
-void EngineContext::unregisterModule(const URL& url)
+void EngineContext::deleteModule(const URL& url)
 {
 	moduleid_t moduleID = findModuleID(url);
 	this->registeredModules.erase(moduleID);
 	this->moduleFinder.erase(url);
 }
 
-bool EngineContext::isModuleRegistered(ARG_moduleid_t moduleID) const
+bool EngineContext::hasModule(ARG_moduleid_t moduleID) const
 {
 	ensureNotNpos(moduleID);
 	return this->registeredModules.find(moduleID) != this->registeredModules.end();
 }
 
-bool EngineContext::isModuleRegistered(const URL& url) const
+bool EngineContext::hasModule(const URL& url) const
 {
 	return this->moduleFinder.find(url) != this->moduleFinder.end();
 }
@@ -126,7 +127,7 @@ RET_moduleid_t EngineContext::findModuleID(const URL& url) const
 	{ throw ElementNotFoundError("URL does not match any registered modules"); }
 }
 
-const RuntimeModule& EngineContext::getModule(ARG_moduleid_t moduleID) const
+const UnpackedModule& EngineContext::getModule(ARG_moduleid_t moduleID) const
 {
 	ensureNotNpos(moduleID);
 	try { return this->registeredModules.at(moduleID); }
@@ -134,12 +135,12 @@ const RuntimeModule& EngineContext::getModule(ARG_moduleid_t moduleID) const
 	{ throw ElementNotFoundError("Module ID does not match any registered modules"); }
 }
 
-const RuntimeModule& EngineContext::getModule(const URL& url) const
+const UnpackedModule& EngineContext::getModule(const URL& url) const
 {
 	return getModule(findModuleID(url));
 }
 
-RuntimeModule& EngineContext::getModule(ARG_moduleid_t moduleID)
+UnpackedModule& EngineContext::getModule(ARG_moduleid_t moduleID)
 {
 	ensureNotNpos(moduleID);
 	try { return this->registeredModules.at(moduleID); }
@@ -147,7 +148,7 @@ RuntimeModule& EngineContext::getModule(ARG_moduleid_t moduleID)
 	{ throw ElementNotFoundError("Module ID does not match any registered modules"); }
 }
 
-RuntimeModule& EngineContext::getModule(const URL& url)
+UnpackedModule& EngineContext::getModule(const URL& url)
 {
 	return getModule(findModuleID(url));
 }

@@ -9,12 +9,6 @@ namespace wckt::build
 	class SourceTable
 	{
 		public:
-			typedef struct
-			{
-				size_t pos;
-				uint32_t row;
-			} pair_t;
-			
 			typedef struct 
 			{
 				uint32_t row;
@@ -24,7 +18,7 @@ namespace wckt::build
 		private:
 			base::URL url;
 			std::string source;
-			std::vector<pair_t> lines;
+			std::vector<size_t> lines;
 			
 		public:
 			SourceTable(const base::URL& url);

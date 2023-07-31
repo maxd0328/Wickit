@@ -9,20 +9,20 @@
 
 namespace wckt::base
 {
-	class RuntimeModule
+	class UnpackedModule
 	{
 		private:
 			EngineContext* context;
 			std::shared_ptr<Module> source;
-			sym::Namespace staticSpace;
+			sym::Namespace symbolTable;
 
-			RuntimeModule(EngineContext* context, std::shared_ptr<Module> source, moduleid_t moduleID);
+			UnpackedModule(EngineContext* context, std::shared_ptr<Module> source, moduleid_t moduleID);
 		public:
-			~RuntimeModule() = default;
+			~UnpackedModule() = default;
 
 			std::shared_ptr<Module> getSource() const;
-			const sym::Namespace& getStaticSpace() const;
-			sym::Namespace& getStaticSpace();
+			const sym::Namespace& getSymbolTable() const;
+			sym::Namespace& getSymbolTable();
 			
 			void declarePackages();
 			void declareDependencies();
@@ -35,7 +35,7 @@ namespace wckt::base
     {
         private:
 			uint32_t contextID;
-			std::map<moduleid_t, RuntimeModule> registeredModules;
+			std::map<moduleid_t, UnpackedModule> registeredModules;
 			std::unordered_map<URL, moduleid_t, URL::hasher_t> moduleFinder;
 			
 			moduleid_t nextModuleID;
@@ -46,16 +46,16 @@ namespace wckt::base
 			
 			uint32_t getContextID() const;
 
-			RET_moduleid_t registerModule(std::shared_ptr<Module> module);
-			void unregisterModule(ARG_moduleid_t moduleID);
-			void unregisterModule(const URL& url);
+			RET_moduleid_t unpackModule(std::shared_ptr<Module> module);
+			void deleteModule(ARG_moduleid_t moduleID);
+			void deleteModule(const URL& url);
 			
-			bool isModuleRegistered(ARG_moduleid_t moduleID) const;
-			bool isModuleRegistered(const URL& url) const;
+			bool hasModule(ARG_moduleid_t moduleID) const;
+			bool hasModule(const URL& url) const;
 			RET_moduleid_t findModuleID(const URL& url) const;
-			const RuntimeModule& getModule(ARG_moduleid_t moduleID) const;
-			const RuntimeModule& getModule(const URL& url) const;
-			RuntimeModule& getModule(ARG_moduleid_t moduleID);
-			RuntimeModule& getModule(const URL& url);
+			const UnpackedModule& getModule(ARG_moduleid_t moduleID) const;
+			const UnpackedModule& getModule(const URL& url) const;
+			UnpackedModule& getModule(ARG_moduleid_t moduleID);
+			UnpackedModule& getModule(const URL& url);
     };
 }

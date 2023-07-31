@@ -39,12 +39,8 @@ Package::Package()
 }
 
 Package::Package(const std::string& name, type::Visibility visibility, const std::vector<Package>& children, const std::vector<URL>& assets)
-: visibility(visibility)
-{
-	this->name = name;
-	this->children = children;
-	this->assets = assets;
-}
+: name(name), visibility(visibility), children(children), assets(assets)
+{}
 
 std::string Package::getName() const
 {

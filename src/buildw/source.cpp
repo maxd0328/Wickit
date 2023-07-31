@@ -10,13 +10,12 @@ SourceTable::SourceTable(const base::URL& url)
 {
 	this->source = url.read(true);
 	
-	this->lines.push_back({ 0, 0 });
+	this->lines.push_back(0);
 	
 	size_t start = this->source.find('\n');
-	uint32_t row = 0;
 	while(start != std::string::npos)
 	{
-		this->lines.push_back({ start + 1, ++row });
+		this->lines.push_back(start + 1);
 		start = this->source.find('\n', start + 1);
 	}
 }
@@ -34,58 +33,43 @@ const std::string& SourceTable::getSource() const
 /* Returns { row, col }, both starting from 1, not 0, using an iterative binary search */
 SourceTable::coords1_t SourceTable::getCoords(size_t pos) const
 {
-	if(pos >= this->source.size())
+	if(pos >= this->source.length())
 	{
-		pair_t last = this->lines[this->lines.size() - 1];
-		return { last.row + 1, (uint32_t) (this->lines.size() - last.pos + 1) };
+		size_t last = this->lines[this->lines.size() - 1];
+		return { (uint32_t) this->lines.size(), (uint32_t) (this->source.length() - last + 1) };
 	}
 	
-	size_t lo = 0, hi = this->source.size() - 1;
+	uint32_t lo = 0, hi = this->lines.size() - 1;
 	
 	while(lo < hi)
 	{
-		size_t index = (lo + hi) / 2;
-		pair_t cur = this->lines[index], next = this->lines[index + 1];
-		if(cur.pos <= pos && next.pos > pos)
-			return { cur.row + 1, (uint32_t) (pos - cur.pos + 1) };
-		else if(pos == next.pos)
-			return { next.row + 1, 1 };
+		uint32_t index = (lo + hi) / 2;
+		size_t cur = this->lines[index], next = this->lines[index + 1];
+		if(cur <= pos && next > pos)
+			return { index + 1, (uint32_t) (pos - cur + 1) };
+		else if(pos == next)
+			return { index + 2, 1 };
 		
-		if(pos < cur.pos)
+		if(pos < cur)
 			hi = index - 1;
 		else
 			lo = index + 1;
 	}
 	
-	pair_t pair = this->lines[lo];
-	return { pair.row + 1, (uint32_t) (pos - pair.pos + 1) };
+	size_t start = this->lines[lo];
+	return { lo + 1, (uint32_t) (pos - start + 1) };
 }
 
 std::string SourceTable::getLine(uint32_t row) const
 {
-	row -= 1;
-	size_t lo = 0, hi = this->source.size() - 1;
+	row--; // make zero-oriented
+	if(row >= this->lines.size())
+		return "";
 	
-	while(lo < hi)
-	{
-		size_t index = (lo + hi) / 2;
-		pair_t cur = this->lines[index];
-		if(cur.row == row)
-		{
-			lo = index;
-			break;
-		}
-		
-		if(row < cur.row)
-			hi = index - 1;
-		else
-			lo = index + 1;
-	}
+	if(row == this->lines.size() - 1)
+		return this->source.substr(this->lines[row]);
 	
-	size_t thisLinePos = this->lines[lo].pos;
-	size_t nextLinePos = lo == this->lines.size() - 1 ? this->source.size() : this->lines[lo + 1].pos;
-	
-	return this->source.substr(thisLinePos, nextLinePos - thisLinePos - 1);
+	return this->source.substr(this->lines[row], this->lines[row + 1] - this->lines[row] - 1);
 }
 
 IntrasourceContextLayer::IntrasourceContextLayer(err::PTR_ErrorContextLayer ptr, size_t position, size_t length, std::shared_ptr<SourceTable> sourceTable)
@@ -117,7 +101,7 @@ std::shared_ptr<SourceTable> IntrasourceContextLayer::getSourceTable() const
 std::string IntrasourceContextLayer::what() const
 {
 	SourceTable::coords1_t coords = this->sourceTable->getCoords(this->position);
-	std::string header = "[\"" + this->sourceTable->getURL().toString() + ":" + std::to_string(coords.row)
+	std::string header = "[\"" + this->sourceTable->getURL().toString() + "\":" + std::to_string(coords.row)
 		+ ":" + std::to_string(coords.col) + "] error in source: " + this->getNext()->what();
 		
 	std::string lineNo = std::to_string(coords.row);
@@ -138,7 +122,7 @@ std::string IntrasourceContextLayer::what() const
 			coords.col += 3;
 	}
 	
-	std::string problemLine = lineNo + " | " + line;
+	std::string problemLine = " " + lineNo + " | " + line;
 	std::string pointerLine = std::string(lineNo.length() + 2, ' ') + "| " + std::string(coords.col - 1, ' ') + '^' + std::string(this->length - 1, '~');
 	
 	return header + "\n" + problemLine + "\n" + pointerLine;

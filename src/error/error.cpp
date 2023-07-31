@@ -162,6 +162,14 @@ void ErrorSentinel::raise(const APIError& error)
 	this->raise(_MAKE_STD_ERR(error.what()));
 }
 
+void ErrorSentinel::assert(bool condition, const std::string& message)
+{
+	if(!condition)
+	{
+		this->raise(_MAKE_STD_ERR(message));
+	}
+}
+
 void ErrorSentinel::forward(ErrorSentinel* sentinel)
 {
 	if(sentinel == nullptr)
@@ -198,7 +206,7 @@ void ErrorSentinel::flushAndPreserve(std::ostream& out) const
 	{
 		if(first)
 		{
-			out << "! " << err->what() << "\n";
+			out << err->what() << "\n";
 			first = false;
 		}
 		else

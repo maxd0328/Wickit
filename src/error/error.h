@@ -145,6 +145,8 @@ namespace wckt::err
 			void raise(PTR_ErrorContextLayer error);
 			void raise(const APIError& error);
 			
+			void assert(bool condition, const std::string& message = "Assertion failed");
+			
 			template<typename _Ty, typename... _Args>
 			void raise(_Args... args)
 			{
