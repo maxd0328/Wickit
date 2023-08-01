@@ -72,18 +72,38 @@ std::string SourceTable::getLine(uint32_t row) const
 	return this->source.substr(this->lines[row], this->lines[row + 1] - this->lines[row] - 1);
 }
 
-IntrasourceContextLayer::IntrasourceContextLayer(err::PTR_ErrorContextLayer ptr, size_t position, size_t length, std::shared_ptr<SourceTable> sourceTable)
-: ErrorContextLayer(std::move(ptr)), position(position), length(length), sourceTable(sourceTable)
+SourceSegment::SourceSegment()
+: position(0), length(0)
 {}
 
-size_t IntrasourceContextLayer::getPosition() const
+SourceSegment::SourceSegment(size_t position, size_t length)
+: position(position), length(length)
+{}
+
+size_t SourceSegment::getPosition() const
 {
 	return this->position;
 }
 
-size_t IntrasourceContextLayer::getLength() const
+size_t SourceSegment::getLength() const
 {
 	return this->length;
+}
+
+SourceSegment SourceSegment::operator|(const SourceSegment& other) const
+{
+	auto first = std::min(this->position, other.position);
+	auto last = std::max(this->position + this->length, other.position + other.length);
+	return SourceSegment(first, last - first);
+}
+
+IntrasourceContextLayer::IntrasourceContextLayer(err::PTR_ErrorContextLayer ptr, const SourceSegment& segment, std::shared_ptr<SourceTable> sourceTable)
+: ErrorContextLayer(std::move(ptr)), segment(segment), sourceTable(sourceTable)
+{}
+
+SourceSegment IntrasourceContextLayer::getSegment() const
+{
+	return this->segment;
 }
 
 std::shared_ptr<SourceTable> IntrasourceContextLayer::getSourceTable() const
@@ -100,7 +120,7 @@ std::shared_ptr<SourceTable> IntrasourceContextLayer::getSourceTable() const
  */
 std::string IntrasourceContextLayer::what() const
 {
-	SourceTable::coords1_t coords = this->sourceTable->getCoords(this->position);
+	SourceTable::coords1_t coords = this->sourceTable->getCoords(this->segment.getPosition());
 	std::string header = "[\"" + this->sourceTable->getURL().toString() + "\":" + std::to_string(coords.row)
 		+ ":" + std::to_string(coords.col) + "] error in source: " + this->getNext()->what();
 		
@@ -122,8 +142,11 @@ std::string IntrasourceContextLayer::what() const
 			coords.col += 3;
 	}
 	
+	size_t length = this->segment.getLength();
+	length = std::min(length, line.length() - coords.col + 1);
+	
 	std::string problemLine = " " + lineNo + " | " + line;
-	std::string pointerLine = std::string(lineNo.length() + 2, ' ') + "| " + std::string(coords.col - 1, ' ') + '^' + std::string(this->length - 1, '~');
+	std::string pointerLine = std::string(lineNo.length() + 2, ' ') + "| " + std::string(coords.col - 1, ' ') + '^' + std::string(length - 1, '~');
 	
 	return header + "\n" + problemLine + "\n" + pointerLine;
 }

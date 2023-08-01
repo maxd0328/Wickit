@@ -30,13 +30,13 @@ namespace wckt::base
 	};
 	
 	class ModuleBuilder : public TagRule
-		{
-			public:
-				static std::shared_ptr<ModuleBuilder> standard();
-				
-				ModuleBuilder(_VECARG(std::shared_ptr<TagRule>, componentRules));
-				~ModuleBuilder() = default;
-				
-				_APPLY_TAG_RULE() override;
-		};
+	{
+		public:
+			static std::shared_ptr<ModuleBuilder> standard();
+			
+			ModuleBuilder(_VECARG(std::shared_ptr<TagRule>, componentRules));
+			~ModuleBuilder() = default;
+			
+			_APPLY_TAG_RULE() override;
+	};
 }

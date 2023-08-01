@@ -5,8 +5,9 @@
 using namespace wckt;
 using namespace wckt::build;
 
-#define __ENUM_TO_STRING_CASE(_Elem, _Null)	case _Elem: return #_Elem;
-#define	__ENUM_TO_ENTRY_INIT(_Elem, _Regex)	{ _Elem, _Regex },
+#define __ENUM_TO_STRING_CASE(_Elem, _Null0, _Null1)	case _Elem: return #_Elem;
+#define	__ENUM_TO_REGEX_INIT(_Elem, _Regex, _Null0)		{ _Elem, _Regex },
+#define __ENUM_TO_NICKNAME_INIT(_Elem, _Null0, _Name)	{ _Elem, _Name },
 
 #define __GET_CLASS_NAME(...)								\
 		std::string Token::getClassName(class_t _class)		\
@@ -20,24 +21,30 @@ using namespace wckt::build;
 
 #define __REGEXPS(...)													\
 		const std::map<Token::class_t, std::string> Token::REGEXPS = {	\
-			__VA_ARGS__(__ENUM_TO_ENTRY_INIT)							\
+			__VA_ARGS__(__ENUM_TO_REGEX_INIT)							\
 		};
 
-#define __CLASSES(_Macro)																					\
-			_Macro(COMMENT_SINGLELINE, "//")																\
-			_Macro(COMMENT_MULTILINE, "/\\*")																\
-			_Macro(BOOL_LITERAL, "(true|false)")															\
-			_Macro(INT_LITERAL, "((0x[0-9A-Fa-f]+)|(0b[01]+)|(0o[0-7]+)|([0-9]+))(L|U|u|s|b|us|ub)?")		\
-			_Macro(FLOAT_LITERAL, "(\\d*\\.\\d+|\\d+\\.)[fd]?")												\
-			_Macro(CHARACTER_LITERAL, "\'.*\'")																\
-			_Macro(STRING_LITERAL, "\".*\"")																\
-			_Macro(IDENTIFIER, "[A-Za-z$_][A-Za-z0-9$_]*")
+#define __NICKNAMES(...)													\
+		const std::map<Token::class_t, std::string> Token::NICKNAMES = {	\
+			__VA_ARGS__(__ENUM_TO_NICKNAME_INIT)							\
+		};
+
+#define __CLASSES(_Macro)																									\
+			_Macro(COMMENT_SINGLELINE, "//", "comment")																		\
+			_Macro(COMMENT_MULTILINE, "/\\*", "comment")																	\
+			_Macro(BOOL_LITERAL, "(true|false)", "bool-literal")															\
+			_Macro(INT_LITERAL, "((0x[0-9A-Fa-f]+)|(0b[01]+)|(0o[0-7]+)|([0-9]+))(L|U|u|s|b|us|ub)?", "int-literal")		\
+			_Macro(FLOAT_LITERAL, "(\\d*\\.\\d+|\\d+\\.)[fd]?", "float-literal")											\
+			_Macro(CHARACTER_LITERAL, "\'.*\'", "char-literal")																\
+			_Macro(STRING_LITERAL, "\".*\"", "string-literal")																\
+			_Macro(IDENTIFIER, "[A-Za-z$_][A-Za-z0-9$_]*", "identifier")
 
 __GET_CLASS_NAME(__CLASSES)
 __REGEXPS(__CLASSES)
+__NICKNAMES(__CLASSES)
 
 Token::Token(class_t _class, const std::string& value, size_t position)
-: _class(_class), value(value), position(position)
+: SourceSegment(position, value.length()), _class(_class), value(value)
 {}
 
 Token::class_t Token::getClass() const
@@ -48,11 +55,6 @@ Token::class_t Token::getClass() const
 std::string Token::getValue() const
 {
 	return this->value;
-}
-
-size_t Token::getPosition() const
-{
-	return this->position;
 }
 
 std::string Token::toString() const
@@ -183,7 +185,7 @@ static void nextReal(err::ErrorSentinel& parentSentinel, _IVEC_ARG)
 	size_t len;
 	char repairChar = 0;
 	err::ErrorSentinel outerSentinel(&parentSentinel, err::ErrorSentinel::COLLECT, [&_IVEC, &len](err::PTR_ErrorContextLayer ptr) {
-		return _MAKE_ERR(IntrasourceContextLayer, std::move(ptr), _IPOS, len, _IBINFO.sourceTable);
+		return _MAKE_ERR(IntrasourceContextLayer, std::move(ptr), SourceSegment(_IPOS, len), _IBINFO.sourceTable);
 	});
 	
 	{

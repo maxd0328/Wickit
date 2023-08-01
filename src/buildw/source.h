@@ -32,19 +32,34 @@ namespace wckt::build
 			std::string getLine(uint32_t row) const;
 	};
 	
-	class IntrasourceContextLayer : public err::ErrorContextLayer
+	class SourceSegment
 	{
 		private:
 			size_t position;
 			size_t length;
-			std::shared_ptr<SourceTable> sourceTable;
-			
+		
 		public:
-			IntrasourceContextLayer(err::PTR_ErrorContextLayer ptr, size_t position, size_t length, std::shared_ptr<SourceTable> sourceTable);
-			~IntrasourceContextLayer() = default;
+			SourceSegment();
+			SourceSegment(size_t position, size_t length);
+			virtual ~SourceSegment() = default;
 			
 			size_t getPosition() const;
 			size_t getLength() const;
+			
+			SourceSegment operator|(const SourceSegment& other) const;
+	};
+	
+	class IntrasourceContextLayer : public err::ErrorContextLayer
+	{
+		private:
+			SourceSegment segment;
+			std::shared_ptr<SourceTable> sourceTable;
+			
+		public:
+			IntrasourceContextLayer(err::PTR_ErrorContextLayer ptr, const SourceSegment& segment, std::shared_ptr<SourceTable> sourceTable);
+			~IntrasourceContextLayer() = default;
+			
+			SourceSegment getSegment() const;
 			std::shared_ptr<SourceTable> getSourceTable() const;
 			
 			std::string what() const override;

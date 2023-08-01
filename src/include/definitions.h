@@ -9,6 +9,7 @@
 #include <sstream>
 #include <memory>
 #include <map>
+#include <stack>
 #include <unordered_map>
 #include <functional>
 #include <cctype>
