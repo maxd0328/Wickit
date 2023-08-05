@@ -52,6 +52,11 @@ namespace wckt::build
 			STD_OUTER			= ALL_OUTER & ~OUTER_DIAMONDS,
 			ALL_STD				= STD_INNER & STD_OUTER
 		};
+
+		inline type operator|(type a, type b) { return a | b; }
+		inline type operator&(type a, type b) { return a & b; }
+		inline type& operator|=(type& a, type b) { return a |= b; }
+		inline type& operator&=(type& a, type b) { return a &= b; }
 	}
 	
 	class Parser
@@ -100,11 +105,11 @@ namespace wckt::build
 			bool matches(std::unique_ptr<ASTNode> node, bool saveNode = true);
 			
 			template<typename _Ty, typename... _Args>
-			void match(bool saveNode = true, _Args... args)
-			{ match(std::make_unique<_Ty>(args...), saveNode); }
+			void match(_Args... args)
+			{ match(std::make_unique<_Ty>(args...)); }
 			template<typename _Ty, typename... _Args>
-			bool matches(bool saveNode = true, _Args... args)
-			{ return matches(std::make_unique<_Ty>(args...), saveNode); }
+			bool matches(_Args... args)
+			{ return matches(std::make_unique<_Ty>(args...)); }
 			
 			bool panicUntil(Token::class_t _class, const std::string& value = "", scopectrl::type ctrl = scopectrl::NONE);
 			bool panicUntil(Token::class_t _class, scopectrl::type ctrl);
@@ -113,6 +118,7 @@ namespace wckt::build
 			bool panicUntilAny(std::initializer_list<Token::class_t> _classes, std::initializer_list<std::string> values = {}, scopectrl::type ctrl = scopectrl::NONE);
 			bool panicUntilAny(std::initializer_list<Token::class_t> _classes, scopectrl::type ctrl);
 			
+			ParseError getFallbackError(const std::string& expected = "") const;
 			void fallback(const std::string& expected = "") const;
 			
 			void reassociatePreUnary(uint32_t pos = 0);
@@ -133,6 +139,7 @@ namespace wckt::build
 	
 	#define _PARSER_ERR							__parser_ERRObject__
 	#define PARSER_REPORT(_Stmt)				try { _Stmt; } catch(const wckt::build::ParseError& _PARSER_ERR) { parser.report(_PARSER_ERR); }
+	#define PARSER_REPORT_RETURN(_Stmt)			try { _Stmt; } catch(const wckt::build::ParseError& _PARSER_ERR) { parser.report(_PARSER_ERR); return; }
 	#define PARSER_REPORT_IF(_Stmt, _Cond)		try { _Stmt; } catch(const wckt::build::ParseError& _PARSER_ERR) { if(_Cond) parser.report(_PARSER_ERR); }
 	
 	namespace services

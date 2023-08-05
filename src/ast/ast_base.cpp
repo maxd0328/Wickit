@@ -1,5 +1,6 @@
 #include "ast/ast_base.h"
 #include "ast/ast_util.h"
+#include "ast/ast_decl.h"
 
 using namespace wckt;
 using namespace wckt::ast;
@@ -15,6 +16,7 @@ void S_CompilationUnit::parse(build::Parser& parser)
 		parser.match<S_ImportDeclaration>();
 	}
 	
+	parser.match<S_DeclarationSet>(false);
 	PARSER_REPORT(parser.match(Token::END_OF_STREAM))
 }
 
@@ -60,14 +62,31 @@ std::string S_ImportDeclaration::toString() const
 }
 
 S_DeclarationSet::S_DeclarationSet(bool inside)
-: ASTNode("declarations", true), inside(inside) {}
+: ASTNode("declaration-set", false), inside(inside) {}
 
 bool S_DeclarationSet::isInside() const
 { return this->inside; }
 
 void S_DeclarationSet::parse(Parser& parser)
 {
-	if((this->inside && parser.matchesLookAhead(Token::DELIM_CLOSE_BRACE))
-		|| (!this->inside && parser.matchesLookAhead(Token::END_OF_STREAM)))
-		return;
+	for(;;)
+	{
+		if(this->inside && parser.matchesLookAhead(Token::DELIM_CLOSE_BRACE))
+			return;
+		else if(parser.matchesLookAhead(Token::END_OF_STREAM))
+			return;
+
+		try
+		{
+			if(parser.matchesLookAhead(Token::KEYW_NAMESPACE))
+				parser.match<S_NamespaceDecl>();
+			else parser.fallback("declaration");
+		}
+		catch(const ParseError& err)
+		{
+			parser.report(err);
+			parser.panicUntilAny({Token::KEYW_NAMESPACE}, inside ?
+				scopectrl::STD_INNER | scopectrl::OUTER_BRACES : scopectrl::STD_INNER);
+		}
+	}
 }

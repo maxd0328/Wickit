@@ -12,14 +12,20 @@ S_NamespaceDecl::S_NamespaceDecl()
 
 void S_NamespaceDecl::parse(build::Parser& parser)
 {
-	parser.match(Token::KEYW_NAMESPACE);
-	parser.match<S_Identifier>();
-	parser.match(Token::DELIM_OPEN_BRACE);
-	
-	while(!parser.matchesLookAhead(Token::DELIM_CLOSE_BRACE) && !parser.matchesLookAhead(Token::END_OF_STREAM))
+	SEGMENT_START
+	try
 	{
-		
+		parser.match(Token::KEYW_NAMESPACE);
+		parser.match<S_Identifier>();
+		SEGMENT_END
 	}
-	
-	parser.match(Token::DELIM_CLOSE_BRACE);
+	catch(const ParseError& err)
+	{
+		SEGMENT_END
+		parser.report(err);
+		parser.panicUntil(Token::DELIM_OPEN_BRACE, scopectrl::OUTER_BRACES);
+	}
+	PARSER_REPORT_RETURN(parser.matchLast(Token::DELIM_OPEN_BRACE));
+	parser.match<S_DeclarationSet>(true);
+	PARSER_REPORT(parser.match(Token::DELIM_CLOSE_BRACE));
 }

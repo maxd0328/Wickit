@@ -5,7 +5,8 @@ using namespace wckt;
 using namespace wckt::build;
 
 #define _EXPECTED_STR				(expectedValue.empty() ? Token::NICKNAMES.at(expectedClass) : expectedValue)
-#define _ERR_MSG_NO_PREDECESSOR		"Unexpected token \'" + problem.getValue() + "\', expected " + _EXPECTED_STR
+#define _PROBLEM_STR				(problem.getClass() == Token::END_OF_STREAM ? "end-of-stream" : "token \'" + problem.getValue() + "\'")
+#define _ERR_MSG_NO_PREDECESSOR		"Unexpected " + _PROBLEM_STR + ", expected " + _EXPECTED_STR
 #define _ERR_MSG_PREDECESSOR		"Expected " + _EXPECTED_STR + " after \'" + problem.getValue() + "\'"
 
 ParseError::ParseError(const Token& problem, Token::class_t expectedClass, const std::string& expectedValue, bool predecessorMode)
@@ -70,18 +71,22 @@ std::unique_ptr<ASTNode>& Parser::getOutput()
 	return this->output;
 }
 
+#define _END_OF_STREAM_POS		(this->buildInfo.tokenSequence->size() == 0 ? 0 :		\
+									this->buildInfo.tokenSequence->at(this->buildInfo	\
+									.tokenSequence->size() - 1).after().getPosition())
+
 Token Parser::next()
 {
 	if(this->position < this->buildInfo.tokenSequence->size())
 		return (*this->buildInfo.tokenSequence)[this->position++];
 	else
-		return Token(Token::END_OF_STREAM, "", this->buildInfo.tokenSequence->size()); 
+		return Token(Token::END_OF_STREAM, " ", _END_OF_STREAM_POS); 
 }
 
 Token Parser::latest() const
 {
 	if(this->position == 0)
-		return Token(Token::__NULL__, "", 0);
+		return Token(Token::__NULL__, " ", 0);
 	else if(this->position >= this->buildInfo.tokenSequence->size())
 		return (*this->buildInfo.tokenSequence)[this->buildInfo.tokenSequence->size() - 1];
 	else
@@ -93,7 +98,7 @@ Token Parser::lookAhead() const
 	if(this->position < this->buildInfo.tokenSequence->size())
 		return (*this->buildInfo.tokenSequence)[this->position];
 	else
-		return Token(Token::END_OF_STREAM, "", this->buildInfo.tokenSequence->size()); 
+		return Token(Token::END_OF_STREAM, " ", _END_OF_STREAM_POS); 
 }
 
 #define _MATCH_COND(_Tok, _Class, _Value)			( (_Tok).getClass() == (_Class) && ((_Value).empty() || (_Tok).getValue() == (_Value)) )
@@ -370,9 +375,17 @@ bool Parser::panicUntilAny(std::initializer_list<Token::class_t> _classes, scope
 	return panicUntilAny(_classes, {}, ctrl);
 }
 
+ParseError Parser::getFallbackError(const std::string& expected) const
+{
+	if(expected.empty())
+		assert(!this->stack.empty(), "Stack must not be empty for implicit fallback");
+	return ParseError(this->lookAhead(), Token::class_t::__NULL__,
+		expected.empty() ? this->stack.top()->getRuleName() : expected);
+}
+
 void Parser::fallback(const std::string& expected) const
 {
-	throw ParseError(this->lookAhead(), Token::class_t::__NULL__, expected);
+	throw getFallbackError(expected);
 }
 
 void Parser::reassociatePreUnary(uint32_t pos)
