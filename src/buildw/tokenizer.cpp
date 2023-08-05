@@ -29,15 +29,97 @@ using namespace wckt::build;
 			__VA_ARGS__(__ENUM_TO_NICKNAME_INIT)							\
 		};
 
-#define __CLASSES(_Macro)																									\
-			_Macro(COMMENT_SINGLELINE, "//", "comment")																		\
-			_Macro(COMMENT_MULTILINE, "/\\*", "comment")																	\
-			_Macro(BOOL_LITERAL, "(true|false)", "bool-literal")															\
-			_Macro(INT_LITERAL, "((0x[0-9A-Fa-f]+)|(0b[01]+)|(0o[0-7]+)|([0-9]+))(L|U|u|s|b|us|ub)?", "int-literal")		\
-			_Macro(FLOAT_LITERAL, "(\\d*\\.\\d+|\\d+\\.)[fd]?", "float-literal")											\
-			_Macro(CHARACTER_LITERAL, "\'.*\'", "char-literal")																\
-			_Macro(STRING_LITERAL, "\".*\"", "string-literal")																\
-			_Macro(IDENTIFIER, "[A-Za-z$_][A-Za-z0-9$_]*", "identifier")
+#define __CLASSES(_Macro)																						\
+		_Macro(KEYW_CONTRACT,				"contract",									"\'contract\'")			\
+		_Macro(KEYW_TEMPLATE,				"template",									"\'template\'")			\
+		_Macro(KEYW_NAMESPACE,				"namespace",								"\'namespace\'")		\
+		_Macro(KEYW_TYPE,					"type",										"\'type\'")				\
+		_Macro(KEYW_EXTENDS,				"extends",									"\'extends\'")			\
+		_Macro(KEYW_FUNCTION,				"function",									"\'function\'")			\
+		_Macro(KEYW_SWITCH,					"switch",									"\'switch\'")			\
+		_Macro(KEYW_CONSTRUCTOR,			"constructor",								"\'constructor\'")		\
+		_Macro(KEYW_IMPORT,					"import",									"\'import\'")			\
+																												\
+		_Macro(KEYW_PUBLIC,					"public",									"\'public\'")			\
+		_Macro(KEYW_RESTRICTED,				"restricted",								"\'restricted\'")		\
+		_Macro(KEYW_PRIVATE,				"private",									"\'private\'")			\
+		_Macro(KEYW_PARTIAL,				"partial",									"\'partial\'")			\
+		_Macro(KEYW_STATIC,					"static",									"\'static\'")			\
+		_Macro(KEYW_DEFAULT,				"default",									"\'default\'")			\
+																												\
+		_Macro(KEYW_SATISFIES,				"satisfies",								"\'satisfies\'")		\
+		_Macro(KEYW_NEW,					"new",										"\'new\'")				\
+		_Macro(KEYW_THIS,					"this",										"\'this\'")				\
+		_Macro(KEYW_CONFLICT,				"conflict",									"\'conflict\'")			\
+		_Macro(KEYW_OPERATOR,				"operator",									"\'operator\'")			\
+																												\
+		_Macro(KEYW_IF,						"if",										"\'if\'")				\
+		_Macro(KEYW_WHILE,					"while",									"\'while\'")			\
+		_Macro(KEYW_FOR,					"for",										"\'for\'")				\
+		_Macro(KEYW_DO,						"do",										"\'do\'")				\
+		_Macro(KEYW_CASE,					"case",										"\'case\'")				\
+		_Macro(KEYW_BREAK,					"break",									"\'break\'")			\
+		_Macro(KEYW_CONTINUE,				"continue",									"\'continue\'")			\
+		_Macro(KEYW_RETURN,					"return",									"\'return\'")			\
+		_Macro(KEYW_THROW,					"throw",									"\'throw\'")			\
+		_Macro(KEYW_TRY,					"try",										"\'try\'")				\
+		_Macro(KEYW_CATCH,					"catch",									"\'catch\'")			\
+		_Macro(KEYW_FINALLY,				"finally",									"\'finally\'")			\
+		_Macro(KEYW_VAR,					"var",										"\'var\'")				\
+		_Macro(KEYW_DELEGATE,				"delegate",									"\'delegate\'")			\
+																												\
+		_Macro(DELIM_OPEN_PARENTHESIS,		"\\(",										"\'(\'")				\
+		_Macro(DELIM_CLOSE_PARENTHESIS,		"\\)",										"\')\'")				\
+		_Macro(DELIM_OPEN_BRACKET,			"\\[",										"\'[\'")				\
+		_Macro(DELIM_CLOSE_BRACKET,			"\\]",										"\']\'")				\
+		_Macro(DELIM_OPEN_BRACE,			"\\{",										"\'{\'")				\
+		_Macro(DELIM_CLOSE_BRACE,			"\\}",										"\'}\'")				\
+		_Macro(DELIM_SEMICOLON,				";",										"\';\'")				\
+		_Macro(DELIM_COLON,					":",										"\':\'")				\
+		_Macro(DELIM_DOT,					"\\.",										"\'.\'")				\
+		_Macro(DELIM_HASH,					"#",										"\'#\'")				\
+																												\
+		_Macro(OPERATOR_ADD,				"\\+",										"\'+\'")				\
+		_Macro(OPERATOR_SUB,				"\\-",										"\'-\'")				\
+		_Macro(OPERATOR_MUL,				"\\*",										"\'*\'")				\
+		_Macro(OPERATOR_DIV,				"/",										"\'/\'")				\
+		_Macro(OPERATOR_MOD,				"%",										"\'%\'")				\
+		_Macro(OPERATOR_AND,				"&",										"\'&\'")				\
+		_Macro(OPERATOR_OR,					"\\|",										"\'|\'")				\
+		_Macro(OPERATOR_XOR,				"^",										"\'^\'")				\
+		_Macro(OPERATOR_SHL,				"<<",										"\'<<\'")				\
+		_Macro(OPERATOR_SHR,				">>",										"\'>>\'")				\
+		_Macro(OPERATOR_LAZY_AND,			"&&",										"\'&&\'")				\
+		_Macro(OPERATOR_LAZY_OR,			"\\|\\|",									"\'||\'")				\
+		_Macro(OPERATOR_INC,				"\\+\\+",									"\'++\'")				\
+		_Macro(OPERATOR_DEC,				"\\-\\-",									"\'--\'")				\
+		_Macro(OPERATOR_LOGICAL_NOT,		"!",										"\'!\'")				\
+		_Macro(OPERATOR_BITWISE_NOT,		"~",										"\'~\'")				\
+		_Macro(OPERATOR_EQUALS,				"==",										"\'==\'")				\
+		_Macro(OPERATOR_NOT_EQUALS,			"!=",										"\'!=\'")				\
+		_Macro(OPERATOR_STRICT_EQUALS,		"===",										"\'===\'")				\
+		_Macro(OPERATOR_STRICT_NOT_EQUALS,	"!==",										"\'!==\'")				\
+		_Macro(OPERATOR_GREATER,			">",										"\'>\'")				\
+		_Macro(OPERATOR_GREATER_OR_EQUAL,	">=",										"\'>=\'")				\
+		_Macro(OPERATOR_LESS,				"<",										"\'<\'")				\
+		_Macro(OPERATOR_LESS_OR_EQUAL,		"<=",										"\'<=\'")				\
+		_Macro(OPERATOR_OPTIONAL,			"\\?",										"\'?\'")				\
+		_Macro(OPERATOR_ASSIGN,				"=",										"\'=\'")				\
+		_Macro(OPERATOR_OTHER_ASSIGN,		":?(\\+|\\-|\\*|/|%|&|\\||\\^|<<|>>)?=",	"assignment-operator")	\
+																												\
+		_Macro(NULL_LITERAL,				"(null)",									"\'null\'")				\
+		_Macro(BOOL_LITERAL,				"(true|false)",								"bool-literal")			\
+		_Macro(INT_LITERAL,																						\
+			"((0x[0-9A-Fa-f]+)|(0b[01]+)|(0o[0-7]+)|([0-9]+))(L|U|u|s|b|us|ub)?",		"int-literal")			\
+		_Macro(FLOAT_LITERAL,				"(\\d*\\.\\d+|\\d+\\.)[fd]?",				"float-literal")		\
+		_Macro(CHARACTER_LITERAL,			"\'.*\'",									"char-literal")			\
+		_Macro(STRING_LITERAL,				"\".*\"",									"string-literal")		\
+		_Macro(IDENTIFIER,					"[A-Za-z$_][A-Za-z0-9$_]*",					"identifier")			\
+																												\
+		_Macro(COMMENT_SINGLELINE,			"//",										"comment")				\
+		_Macro(COMMENT_MULTILINE,			"/\\*",										"comment")				\
+		_Macro(END_OF_STREAM,				std::string(),								"end-of-stream")		\
+		_Macro(__NULL__,					std::string(),								"<null>")
 
 __GET_CLASS_NAME(__CLASSES)
 __REGEXPS(__CLASSES)
@@ -158,23 +240,26 @@ static void findLongestMatch(Token::class_t& _class, size_t& len, err::ErrorSent
 {
 	std::string token = _ISRC.substr(_IPOS, len);
 	std::smatch maxMatch;
-	_class = Token::__END__;
+	_class = Token::__NULL__;
 	
 	if(repairChar)
 		token += repairChar;
 	
 	for(const auto& entry : Token::REGEXPS)
 	{
+		if(entry.second.empty())
+			continue;
+		
 		std::smatch match;
 		std::regex regex(entry.second);
-		if(std::regex_search(token, match, regex, std::regex_constants::match_continuous) && (_class == Token::__END__ || match.length() > maxMatch.length()))
+		if(std::regex_search(token, match, regex, std::regex_constants::match_continuous) && (_class == Token::__NULL__ || match.length() > maxMatch.length()))
 		{
 			maxMatch = match;
 			_class = entry.first;
 		}
 	}
 	
-	if(_class == Token::__END__)
+	if(_class == Token::__NULL__)
 		sentinel.raise(_MAKE_STD_ERR("\'" + token + "\' is not a token"));
 	else
 		len = (size_t) maxMatch.length() > len ? len : maxMatch.length();
@@ -205,7 +290,7 @@ static void nextReal(err::ErrorSentinel& parentSentinel, _IVEC_ARG)
 	Token::class_t _class;
 	findLongestMatch(_class, len, outerSentinel, repairChar, _IVEC);
 	
-	if(_class != Token::__END__)
+	if(_class != Token::__NULL__)
 	{
 		if(_class == Token::COMMENT_SINGLELINE)
 		{

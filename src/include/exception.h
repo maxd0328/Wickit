@@ -18,7 +18,11 @@ class APIError : public std::runtime_error
 								};
 
 _MAKE_API_ERROR(AssertionError)
-inline void assert(bool condition, const std::string& message = "Assertion failed");
+inline void assert(bool condition, const std::string& message = "Assertion failed")
+{
+	if(!condition)
+    { throw AssertionError(message); }
+}
 
 _MAKE_API_ERROR(IOError)
 _MAKE_API_ERROR(FormatError)

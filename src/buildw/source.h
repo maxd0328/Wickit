@@ -47,6 +47,7 @@ namespace wckt::build
 			size_t getLength() const;
 			
 			SourceSegment operator|(const SourceSegment& other) const;
+			SourceSegment after() const;
 	};
 	
 	class IntrasourceContextLayer : public err::ErrorContextLayer

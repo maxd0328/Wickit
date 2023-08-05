@@ -1,5 +1,6 @@
 #include "buildw/build.h"
 #include "buildw/tokenizer.h"
+#include "buildw/parser.h"
 #include "include/exception.h"
 
 using namespace wckt;
@@ -115,6 +116,10 @@ void services::buildFromContext(const BuildContext& context, err::ErrorSentinel*
 		
 		for(const auto& token : *buildInfo.tokenSequence)
 			std::cout << token.toString() << std::endl;
+		
+		services::parse(buildInfo, &sentinel);
+		
+		std::cout << std::endl << buildInfo.ast->toString() << std::endl;
 		// ...
 	}
 }

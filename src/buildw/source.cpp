@@ -97,6 +97,11 @@ SourceSegment SourceSegment::operator|(const SourceSegment& other) const
 	return SourceSegment(first, last - first);
 }
 
+SourceSegment SourceSegment::after() const
+{
+	return SourceSegment(this->position + this->length, 1);
+}
+
 IntrasourceContextLayer::IntrasourceContextLayer(err::PTR_ErrorContextLayer ptr, const SourceSegment& segment, std::shared_ptr<SourceTable> sourceTable)
 : ErrorContextLayer(std::move(ptr)), segment(segment), sourceTable(sourceTable)
 {}
@@ -143,7 +148,7 @@ std::string IntrasourceContextLayer::what() const
 	}
 	
 	size_t length = this->segment.getLength();
-	length = std::min(length, line.length() - coords.col + 1);
+	length = std::min(length, line.length() - (coords.col - 1) + 1); // + 1 to allow for one character past the end of the line
 	
 	std::string problemLine = " " + lineNo + " | " + line;
 	std::string pointerLine = std::string(lineNo.length() + 2, ' ') + "| " + std::string(coords.col - 1, ' ') + '^' + std::string(length - 1, '~');

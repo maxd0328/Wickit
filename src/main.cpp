@@ -58,6 +58,5 @@ int main()
 		.getSource()->getRootPackage().getChildren()[0].getAssets()[0], std::string("test"));
 	build::services::buildFromContext(buildContext, &sentinel);
 	
-	if(sentinel.hasErrors())
-		quit(sentinel);
+	quit(sentinel);
 }

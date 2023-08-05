@@ -40,11 +40,11 @@ std::string ErrorPackage::what() const
 	{
 		if(first)
 		{
-			ss << "! " << err->what() << "\n";
+			ss << err->what() << "\n";
 			first = false;
 		}
 		else
-			ss << "\n! " << err->what() << "\n";
+			ss << "\n" << err->what() << "\n";
 	}
 	return ss.str();
 }
@@ -210,6 +210,6 @@ void ErrorSentinel::flushAndPreserve(std::ostream& out) const
 			first = false;
 		}
 		else
-			out << "\n! " << err->what() << "\n";
+			out << "\n" << err->what() << "\n";
 	}
 }

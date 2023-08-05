@@ -17,7 +17,7 @@ namespace wckt::build
 			std::vector<std::unique_ptr<ASTNode>> children;
 			
 		public:
-			ASTNode(std::string ruleName, bool helper);
+			ASTNode(std::string ruleName, bool helper = false);
 			virtual ~ASTNode() = default;
 			
 			std::string getRuleName() const;
@@ -28,6 +28,8 @@ namespace wckt::build
 			uint32_t getDegree() const;
 			
 			virtual void parse(Parser& parser) = 0;
+			
+			virtual std::string toString() const;
 			
 			friend class Parser;
 	};
@@ -42,5 +44,6 @@ namespace wckt::build
 			~AST() = default;
 			
 			const ASTNode& getRoot() const;
+			std::string toString() const;
 	};
 }
