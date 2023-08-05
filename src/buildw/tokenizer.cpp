@@ -34,6 +34,7 @@ using namespace wckt::build;
 		_Macro(KEYW_TEMPLATE,				"template",									"\'template\'")			\
 		_Macro(KEYW_NAMESPACE,				"namespace",								"\'namespace\'")		\
 		_Macro(KEYW_TYPE,					"type",										"\'type\'")				\
+		_Macro(KEYW_AS,						"as",										"\'as\'")				\
 		_Macro(KEYW_EXTENDS,				"extends",									"\'extends\'")			\
 		_Macro(KEYW_FUNCTION,				"function",									"\'function\'")			\
 		_Macro(KEYW_SWITCH,					"switch",									"\'switch\'")			\

@@ -80,12 +80,15 @@ void S_DeclarationSet::parse(Parser& parser)
 		{
 			if(parser.matchesLookAhead(Token::KEYW_NAMESPACE))
 				parser.match<S_NamespaceDecl>();
+			else if(parser.matchesLookAhead(Token::KEYW_TYPE))
+				parser.match<S_TypeDecl>();
 			else parser.fallback("declaration");
 		}
 		catch(const ParseError& err)
 		{
 			parser.report(err);
-			parser.panicUntilAny({Token::KEYW_NAMESPACE}, inside ?
+			parser.next();
+			parser.panicUntilAny({Token::KEYW_NAMESPACE, Token::KEYW_TYPE}, inside ?
 				scopectrl::STD_INNER | scopectrl::OUTER_BRACES : scopectrl::STD_INNER);
 		}
 	}

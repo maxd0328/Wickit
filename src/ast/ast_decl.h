@@ -12,4 +12,13 @@ namespace wckt::ast
 			
 			void parse(build::Parser& parser) override;
 	};
+
+	class S_TypeDecl : public build::ASTNode
+	{
+		public:
+			S_TypeDecl();
+			~S_TypeDecl() = default;
+
+			void parse(build::Parser& parser) override;
+	};
 }

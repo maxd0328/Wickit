@@ -53,10 +53,8 @@ namespace wckt::build
 			ALL_STD				= STD_INNER & STD_OUTER
 		};
 
-		inline type operator|(type a, type b) { return a | b; }
-		inline type operator&(type a, type b) { return a & b; }
-		inline type& operator|=(type& a, type b) { return a |= b; }
-		inline type& operator&=(type& a, type b) { return a &= b; }
+		inline type operator|(type a, type b) { return (type) ((uint32_t) a | (uint32_t) b); }
+		inline type operator&(type a, type b) { return (type) ((uint32_t) a & (uint32_t) b); }
 	}
 	
 	class Parser
@@ -141,7 +139,11 @@ namespace wckt::build
 	#define PARSER_REPORT(_Stmt)				try { _Stmt; } catch(const wckt::build::ParseError& _PARSER_ERR) { parser.report(_PARSER_ERR); }
 	#define PARSER_REPORT_RETURN(_Stmt)			try { _Stmt; } catch(const wckt::build::ParseError& _PARSER_ERR) { parser.report(_PARSER_ERR); return; }
 	#define PARSER_REPORT_IF(_Stmt, _Cond)		try { _Stmt; } catch(const wckt::build::ParseError& _PARSER_ERR) { if(_Cond) parser.report(_PARSER_ERR); }
-	
+
+	#define PARSE_SINGLE_FN(_Class, _Fn, _Args...)		\
+		void _Class::parse(wckt::build::Parser& parser)	\
+		{ parser._Fn(_Args); }
+
 	namespace services
 	{
 		void parse(build_info_t& info, err::ErrorSentinel* parentSentinel);

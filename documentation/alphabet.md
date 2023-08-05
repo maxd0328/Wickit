@@ -36,6 +36,7 @@ KEYW_CONTRACT: contract
 KEYW_TEMPLATE: template
 KEYW_NAMESPACE: namespace
 KEYW_TYPE: type
+KEYW_AS: as
 KEYW_EXTENDS: extends
 KEYW_FUNCTION: function
 KEYW_SWITCH: switch
