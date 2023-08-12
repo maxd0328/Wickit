@@ -8,8 +8,6 @@ namespace wckt::ast
 	{
 		public:
 			S_StaticSymbol();
-			~S_StaticSymbol() = default;
-			
 			sym::Locator getLocator() const;
 			
 			void parse(build::Parser& parser) override;
@@ -22,8 +20,6 @@ namespace wckt::ast
 		
 		public:
 			S_Identifier();
-			~S_Identifier() = default;
-			
 			std::string getValue() const;
 			
 			void parse(build::Parser& parser) override;

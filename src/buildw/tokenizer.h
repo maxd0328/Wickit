@@ -29,12 +29,13 @@ namespace wckt::build
 				KEYW_PARTIAL				= 0x23,
 				KEYW_STATIC					= 0x24,
 				KEYW_DEFAULT				= 0x25,
-
-				KEYW_SATISFIES				= 0x40,
-				KEYW_NEW					= 0x41,
-				KEYW_THIS					= 0x42,
-				KEYW_CONFLICT				= 0x43,
-				KEYW_OPERATOR				= 0x44,
+				
+				KEYW_VOID					= 0x40,
+				KEYW_SATISFIES				= 0x41,
+				KEYW_NEW					= 0x42,
+				KEYW_THIS					= 0x43,
+				KEYW_CONFLICT				= 0x44,
+				KEYW_OPERATOR				= 0x45,
 
 				KEYW_IF						= 0x60,
 				KEYW_WHILE					= 0x61,
@@ -60,7 +61,8 @@ namespace wckt::build
 				DELIM_SEMICOLON				= 0x86,
 				DELIM_COLON					= 0x87,
 				DELIM_DOT					= 0x88,
-				DELIM_HASH					= 0x89,
+				DELIM_COMMA					= 0x89,
+				DELIM_HASH					= 0x8a,
 
 				OPERATOR_ADD				= 0xa0,
 				OPERATOR_SUB				= 0xa1,
@@ -87,8 +89,9 @@ namespace wckt::build
 				OPERATOR_LESS				= 0xb6,
 				OPERATOR_LESS_OR_EQUAL		= 0xb7,
 				OPERATOR_OPTIONAL			= 0xb8,
-				OPERATOR_ASSIGN				= 0xb9,
-				OPERATOR_OTHER_ASSIGN		= 0xba,
+				OPERATOR_ARROW				= 0xb9,
+				OPERATOR_ASSIGN				= 0xba,
+				OPERATOR_OTHER_ASSIGN		= 0xbb,
 				
 				NULL_LITERAL				= 0xd0,
 				BOOL_LITERAL				= 0xd1,

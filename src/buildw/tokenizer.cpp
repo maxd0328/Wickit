@@ -48,6 +48,7 @@ using namespace wckt::build;
 		_Macro(KEYW_STATIC,					"static",									"\'static\'")			\
 		_Macro(KEYW_DEFAULT,				"default",									"\'default\'")			\
 																												\
+		_Macro(KEYW_VOID,					"void",										"\'void\'")				\
 		_Macro(KEYW_SATISFIES,				"satisfies",								"\'satisfies\'")		\
 		_Macro(KEYW_NEW,					"new",										"\'new\'")				\
 		_Macro(KEYW_THIS,					"this",										"\'this\'")				\
@@ -78,6 +79,7 @@ using namespace wckt::build;
 		_Macro(DELIM_SEMICOLON,				";",										"\';\'")				\
 		_Macro(DELIM_COLON,					":",										"\':\'")				\
 		_Macro(DELIM_DOT,					"\\.",										"\'.\'")				\
+		_Macro(DELIM_COMMA,					",",										"\',\'")				\
 		_Macro(DELIM_HASH,					"#",										"\'#\'")				\
 																												\
 		_Macro(OPERATOR_ADD,				"\\+",										"\'+\'")				\
@@ -105,6 +107,7 @@ using namespace wckt::build;
 		_Macro(OPERATOR_LESS,				"<",										"\'<\'")				\
 		_Macro(OPERATOR_LESS_OR_EQUAL,		"<=",										"\'<=\'")				\
 		_Macro(OPERATOR_OPTIONAL,			"\\?",										"\'?\'")				\
+		_Macro(OPERATOR_ARROW,				"\\->",										"\'->\'")				\
 		_Macro(OPERATOR_ASSIGN,				"=",										"\'=\'")				\
 		_Macro(OPERATOR_OTHER_ASSIGN,		":?(\\+|\\-|\\*|/|%|&|\\||\\^|<<|>>)?=",	"assignment-operator")	\
 																												\

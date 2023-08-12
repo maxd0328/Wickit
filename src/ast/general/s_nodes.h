@@ -8,8 +8,6 @@ namespace wckt::ast
 	{
 		public:
 			S_CompilationUnit();
-			~S_CompilationUnit() = default;
-			
 			void parse(build::Parser& parser) override;
 	};
 	
@@ -20,8 +18,6 @@ namespace wckt::ast
 		
 		public:
 			S_ImportDeclaration();
-			~S_ImportDeclaration() = default;
-			
 			bool isWildcard() const;
 			
 			void parse(build::Parser& parser) override;
@@ -35,10 +31,6 @@ namespace wckt::ast
 		
 		public:
 			S_DeclarationSet(bool inside);
-			~S_DeclarationSet() = default;
-			
-			bool isInside() const;
-			
 			void parse(build::Parser& parser) override;
 	};
 }

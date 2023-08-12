@@ -8,67 +8,171 @@
 
 namespace wckt::build
 {
-	class ParseError : public APIError
+	class TokenView
+	{
+		public:
+			virtual ~TokenView() = default;
+			virtual Token look(int32_t off = 0) const = 0;
+	};
+	
+	class SingleTokenView : public TokenView
 	{
 		private:
-			bool predecessorMode;
+			Token token;
+			
+		public:
+			SingleTokenView(const Token& token);
+			~SingleTokenView() override = default;
+			
+			Token look(int32_t off = 0) const override;
+	};
+	
+	class TokenIterator : public TokenView
+	{
+		private:
+			std::shared_ptr<std::vector<Token>> tokenSequence;
+			size_t position;
+			
+		public:
+			TokenIterator(std::shared_ptr<std::vector<Token>> tokenSequence, size_t position = 0);
+			~TokenIterator() = default;
+			
+			std::shared_ptr<std::vector<Token>> getTokenSequence() const;
+			size_t getPosition() const;
+			
+			Token look(int32_t off = 0) const override;
+			
+			Token next();
+			Token latest() const;
+			Token lookAhead() const;
+			
+			TokenIterator from(int32_t off = 0) const;
+			
+			friend class Parser;
+	};
+	
+	class ParseError : public APIError
+	{
+		public:
+			enum mode_t
+			{
+				EXPECTED_INSTEAD_OF,
+				EXPECTED_AFTER,
+				EXPECTED_BEFORE
+			};
+			
+			static std::string getMessage(const Token& problem, Token::class_t expectedClass, const std::string& expectedValue, mode_t mode);
+		
+		private:
 			Token problem;
 			Token::class_t expectedClass;
 			std::string expectedValue;
+			mode_t mode;
 			
 		public:
-			ParseError(const Token& problem, Token::class_t expectedClass = Token::__NULL__, const std::string& expectedValue = "", bool predecessorMode = false);
+			ParseError(const Token& problem, Token::class_t expectedClass = Token::__NULL__, const std::string& expectedValue = "", mode_t mode = EXPECTED_INSTEAD_OF);
+			ParseError(const Token& problem, Token::class_t expectedClass = Token::__NULL__, mode_t mode = EXPECTED_INSTEAD_OF);
 			~ParseError() = default;
 			
-			bool isPredecessorMode() const;
 			Token getProblem() const;
 			Token::class_t getExpectedClass() const;
 			std::string getExpectedValue() const;
+			mode_t getMode() const;
+			
+			SourceSegment getSegment() const;
 	};
 	
-	namespace scopectrl
+	class Matcher
 	{
-		enum type
-		{
-			INNER_PARENTHESES	= 0b00000001,
-			INNER_BRACKETS		= 0b00000010,
-			INNER_BRACES		= 0b00000100,
-			INNER_DIAMONDS		= 0b00001000,
-			OUTER_PARENTHESES	= 0b00010000,
-			OUTER_BRACKETS		= 0b00100000,
-			OUTER_BRACES		= 0b01000000,
-			OUTER_DIAMONDS		= 0b10000000,
+		private:
+			std::vector<Token::class_t> classes;
+			std::vector<std::string> values;
 			
-			NONE				= 0b00000000,
-			ALL					= 0b11111111,
+		public:
+			Matcher(Token::class_t _class, const std::string& value = "");
+			Matcher(const std::vector<Token::class_t>& classes, _VECARG(std::string, values));
+			Matcher(std::initializer_list<Token::class_t> classes, std::initializer_list<std::string> values = {});
+			~Matcher() = default;
 			
-			ALL_INNER			= INNER_PARENTHESES & INNER_BRACKETS & INNER_BRACES & INNER_DIAMONDS,
-			ALL_OUTER			= OUTER_PARENTHESES & OUTER_BRACKETS & OUTER_BRACES & OUTER_DIAMONDS,
-			ALL_PARENTHESES		= INNER_PARENTHESES & OUTER_PARENTHESES,
-			ALL_BRACKETS		= INNER_BRACKETS & OUTER_BRACKETS,
-			ALL_BRACES			= INNER_BRACES & OUTER_BRACES,
-			ALL_DIAMONDS		= INNER_DIAMONDS & OUTER_DIAMONDS,
-			STD_INNER			= ALL_INNER & ~INNER_DIAMONDS,
-			STD_OUTER			= ALL_OUTER & ~OUTER_DIAMONDS,
-			ALL_STD				= STD_INNER & STD_OUTER
-		};
-
-		inline type operator|(type a, type b) { return (type) ((uint32_t) a | (uint32_t) b); }
-		inline type operator&(type a, type b) { return (type) ((uint32_t) a & (uint32_t) b); }
-	}
+			const std::vector<Token::class_t>& getClasses() const;
+			const std::vector<std::string>& getValues() const;
+			uint32_t getLength() const;
+			
+			void match(const TokenView& view, std::shared_ptr<SourceTable> sourceTable = nullptr) const;
+			bool matches(const TokenView& view) const;
+			
+			void match(const Token& token, std::shared_ptr<SourceTable> sourceTable = nullptr) const;
+			bool matches(const Token& token) const;
+			
+			ParseError getError(const TokenView& view, const std::string& expected = "") const;
+	};
+	
+	class RecoveryInterrupt : public std::exception
+	{
+		private:
+			std::unique_ptr<TokenView> view;
+			
+		public:
+			RecoveryInterrupt(std::unique_ptr<TokenView> view);
+			~RecoveryInterrupt() = default;
+			
+			const TokenView& getView() const;
+	};
+	
+	class BacktrackInterrupt : public std::exception
+	{
+		public:
+			BacktrackInterrupt() = default;
+			~BacktrackInterrupt() = default;
+	};
+	
+	class ScopeDetector
+	{
+		private:
+			std::vector<Matcher> openers;
+			std::vector<Matcher> closers;
+			std::vector<uint32_t> counters;
+			
+		public:
+			ScopeDetector() = default;
+			~ScopeDetector() = default;
+			
+			ScopeDetector& withScope(const Matcher& opener, const Matcher& closer);
+			
+			bool processNext(const TokenView& view);
+			bool isInScope() const;
+	};
+	
+	#define __SCOPE_PARENTHESES			.withScope(wckt::build::Token::DELIM_OPEN_PARENTHESIS, wckt::build::Token::DELIM_CLOSE_PARENTHESIS)
+	#define __SCOPE_BRACKETS			.withScope(wckt::build::Token::DELIM_OPEN_BRACKET, wckt::build::Token::DELIM_CLOSE_BRACKET)
+	#define __SCOPE_BRACES				.withScope(wckt::build::Token::DELIM_OPEN_BRACE, wckt::build::Token::DELIM_CLOSE_BRACE)
+	#define __SCOPE_DIAMONDS			.withScope(wckt::build::Token::OPERATOR_LESS, wckt::build::Token::OPERATOR_GREATER)
+	
+	#define SCOPE_DETECTOR_PARENTHESES	wckt::build::ScopeDetector() __SCOPE_PARENTHESES
+	#define SCOPE_DETECTOR_BRACKETS		wckt::build::ScopeDetector() __SCOPE_BRACKETS
+	#define SCOPE_DETECTOR_BRACES		wckt::build::ScopeDetector() __SCOPE_BRACES
+	#define SCOPE_DETECTOR_DIAMONDS		wckt::build::ScopeDetector() __SCOPE_DIAMONDS
+	#define SCOPE_DETECTOR_STD			wckt::build::ScopeDetector() __SCOPE_PARENTHESES __SCOPE_BRACKETS __SCOPE_BRACES
+	#define SCOPE_DETECTOR_ALL			wckt::build::ScopeDetector() __SCOPE_PARENTHESES __SCOPE_BRACKETS __SCOPE_BRACES __SCOPE_DIAMONDS
+	#define SCOPE_DETECTOR_NONE			wckt::build::ScopeDetector()
 	
 	class Parser
-	{	
+	{
 		private:
 			build_info_t& buildInfo;
 			err::ErrorSentinel sentinel;
-			uint32_t position;
+			TokenIterator iterator;
 			
 			std::stack<std::unique_ptr<ASTNode>> stack;
 			std::unique_ptr<ASTNode> output;
 			
+			std::vector<Matcher> recoveryTokens;
+			std::stack<size_t> positions;
+			
 			bool invsegActive; // Used by ctx-fn
 			SourceSegment invseg;
+			
+			bool sufficiencyFlag;
 			
 		public:
 			Parser(build_info_t& buildInfo, err::ErrorSentinel* parentSentinel);
@@ -81,69 +185,69 @@ namespace wckt::build
 			const std::unique_ptr<ASTNode>& getOutput() const;
 			std::unique_ptr<ASTNode>& getOutput();
 			
-			Token next();
-			Token latest() const;
-			Token lookAhead() const;
+			const TokenIterator& getIterator() const;
+			TokenIterator& getIterator();
 			
-			void match(Token::class_t _class, const std::string& value = "");
-			void matchLast(Token::class_t _class, const std::string& value = "");
-			void match(const Token& token, Token::class_t _class, const std::string& value = "") const;
-			void matchLookAhead(Token::class_t _class, const std::string& value = "") const;
-			void matchLatest(Token::class_t _class, const std::string& value = "") const;
+			void match(const Matcher& matcher);
+			void matchLookAhead(const Matcher& matcher);
+			void matchLatest(const Matcher& matcher);
 			
-			bool matches(Token::class_t _class, const std::string& value = "");
-			bool matches(const Token& token, Token::class_t _class, const std::string& value = "") const;
-			bool matchesLookAhead(Token::class_t _class, const std::string& value = "") const;
-			bool matchesLatest(Token::class_t _class, const std::string& value = "") const;
+			bool matches(const Matcher& matcher);
+			bool matchesLookAhead(const Matcher& matcher);
+			bool matchesLatest(const Matcher& matcher);
 			
-			void matchAll(std::initializer_list<Token::class_t> _classes, std::initializer_list<std::string> values = {}, bool advance = true);
-			bool matchesAll(std::initializer_list<Token::class_t> _classes, std::initializer_list<std::string> values = {}, bool advance = true);
-			
-			void match(std::unique_ptr<ASTNode> node, bool saveNode = true);
-			bool matches(std::unique_ptr<ASTNode> node, bool saveNode = true);
+		private:
+			void matchInternal(std::unique_ptr<ASTNode> node, std::initializer_list<Matcher> __recoveryTokens, bool saveNode);
+		public:
+			void match(std::unique_ptr<ASTNode> node, std::initializer_list<Matcher> __recoveryTokens = {});
+			void matchStateless(std::unique_ptr<ASTNode> node, std::initializer_list<Matcher> __recoveryTokens = {});
 			
 			template<typename _Ty, typename... _Args>
-			void match(_Args... args)
-			{ match(std::make_unique<_Ty>(args...)); }
+			void match(std::initializer_list<Matcher> __recoveryTokens = {}, _Args... args)
+			{ match(std::make_unique<_Ty>(args...), __recoveryTokens); }
 			template<typename _Ty, typename... _Args>
-			bool matches(_Args... args)
-			{ return matches(std::make_unique<_Ty>(args...)); }
+			void matchStateless(std::initializer_list<Matcher> __recoveryTokens = {}, _Args... args)
+			{ matchStateless(std::make_unique<_Ty>(args...), __recoveryTokens); }
 			
-			bool panicUntil(Token::class_t _class, const std::string& value = "", scopectrl::type ctrl = scopectrl::NONE);
-			bool panicUntil(Token::class_t _class, scopectrl::type ctrl);
-			bool panicUntil(std::initializer_list<Token::class_t> _classes, std::initializer_list<std::string> values = {}, scopectrl::type ctrl = scopectrl::NONE);
-			bool panicUntil(std::initializer_list<Token::class_t> _classes, scopectrl::type ctrl);
-			bool panicUntilAny(std::initializer_list<Token::class_t> _classes, std::initializer_list<std::string> values = {}, scopectrl::type ctrl = scopectrl::NONE);
-			bool panicUntilAny(std::initializer_list<Token::class_t> _classes, scopectrl::type ctrl);
+			void nextIsSufficient();
+			void nowIsSufficient();
 			
-			ParseError getFallbackError(const std::string& expected = "") const;
-			void fallback(const std::string& expected = "") const;
+			bool panicUntil(const Matcher& matcher, bool silent, ScopeDetector detector = SCOPE_DETECTOR_NONE);
+			bool panicUntil(std::initializer_list<Matcher> matchers, const std::string& expected, bool silent, ScopeDetector detector = SCOPE_DETECTOR_NONE);
+			void fallback(const std::string& expected = "", ParseError::mode_t mode = ParseError::EXPECTED_INSTEAD_OF) const;
 			
-			void reassociatePreUnary(uint32_t pos = 0);
-			void reassociatePostUnary(uint32_t pos = 0);
-			void reassociateBinary(uint32_t pos = 0);
+			void reassociateUnder(uint32_t target = 0);
 			
 			void overrideSegment(const SourceSegment& segment);
 			
 			void report(const ParseError& error);
+			
+			void mark();
+			void unmark();
+			void backtrack();
 	};
 	
 	#define _SEG_CTRID					__parser_SegmentCTR__
-	#define SEGMENT_STARTV(_Parser)		const auto _SEG_CTRID = _Parser.lookAhead();
-	#define SEGMENT_ENDV(_Parser)		_Parser.overrideSegment(_SEG_CTRID | _Parser.latest());
+	#define SEGMENT_STARTV(_Parser)		const wckt::build::SourceSegment _SEG_CTRID = _Parser.getIterator().lookAhead();
+	#define SEGMENT_ENDV(_Parser)		_Parser.overrideSegment(_SEG_CTRID | _Parser.getIterator().latest());
 	
 	#define SEGMENT_START				SEGMENT_STARTV(parser)
 	#define SEGMENT_END					SEGMENT_ENDV(parser)
+	
+	#define SUFFICIENT_IFV(_Parser)		_Parser.nextIsSufficient();
+	#define SUFFICIENT_IF				SUFFICIENT_IFV(parser)
+	#define SUFFICIENT_NOWV(_Parser)	_Parser.nowIsSufficient();
+	#define SUFFICIENT_NOW				SUFFICIENT_NOWV(parser)
 	
 	#define _PARSER_ERR							__parser_ERRObject__
 	#define PARSER_REPORT(_Stmt)				try { _Stmt; } catch(const wckt::build::ParseError& _PARSER_ERR) { parser.report(_PARSER_ERR); }
 	#define PARSER_REPORT_RETURN(_Stmt)			try { _Stmt; } catch(const wckt::build::ParseError& _PARSER_ERR) { parser.report(_PARSER_ERR); return; }
 	#define PARSER_REPORT_IF(_Stmt, _Cond)		try { _Stmt; } catch(const wckt::build::ParseError& _PARSER_ERR) { if(_Cond) parser.report(_PARSER_ERR); }
-
+	
 	#define PARSE_SINGLE_FN(_Class, _Fn, _Args...)		\
 		void _Class::parse(wckt::build::Parser& parser)	\
-		{ parser._Fn(_Args); }
-
+		{ SUFFICIENT_IF parser._Fn(_Args); }
+	
 	namespace services
 	{
 		void parse(build_info_t& info, err::ErrorSentinel* parentSentinel);

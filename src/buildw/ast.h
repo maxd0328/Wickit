@@ -14,6 +14,7 @@ namespace wckt::build
 			bool helper;
 			
 			SourceSegment segment;
+			bool sufficient;
 			std::vector<std::unique_ptr<ASTNode>> children;
 			
 		public:
@@ -24,6 +25,7 @@ namespace wckt::build
 			bool isHelper() const;
 			
 			SourceSegment getSegment() const;
+			bool isSufficient() const;
 			const std::vector<std::unique_ptr<ASTNode>>& getChildren() const;
 			uint32_t getDegree() const;
 			

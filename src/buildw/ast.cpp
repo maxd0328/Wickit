@@ -4,7 +4,7 @@ using namespace wckt;
 using namespace wckt::build;
 
 ASTNode::ASTNode(std::string ruleName, bool helper)
-: ruleName(ruleName), helper(helper)
+: ruleName(ruleName), helper(helper), sufficient(false)
 {}
 
 std::string ASTNode::getRuleName() const
@@ -20,6 +20,11 @@ bool ASTNode::isHelper() const
 SourceSegment ASTNode::getSegment() const
 {
 	return this->segment;
+}
+
+bool ASTNode::isSufficient() const
+{
+	return this->sufficient;
 }
 
 const std::vector<std::unique_ptr<ASTNode>>& ASTNode::getChildren() const

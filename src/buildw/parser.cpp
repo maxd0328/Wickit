@@ -1,23 +1,99 @@
 #include "buildw/parser.h"
-#include "ast/ast_base.h"
+#include "ast/general/s_nodes.h"
 
 using namespace wckt;
 using namespace wckt::build;
 
-#define _EXPECTED_STR				(expectedValue.empty() ? Token::NICKNAMES.at(expectedClass) : expectedValue)
-#define _PROBLEM_STR				(problem.getClass() == Token::END_OF_STREAM ? "end-of-stream" : "token \'" + problem.getValue() + "\'")
-#define _ERR_MSG_NO_PREDECESSOR		"Unexpected " + _PROBLEM_STR + ", expected " + _EXPECTED_STR
-#define _ERR_MSG_PREDECESSOR		"Expected " + _EXPECTED_STR + " after \'" + problem.getValue() + "\'"
-
-ParseError::ParseError(const Token& problem, Token::class_t expectedClass, const std::string& expectedValue, bool predecessorMode)
-: APIError(predecessorMode ? _ERR_MSG_PREDECESSOR : _ERR_MSG_NO_PREDECESSOR),
-	predecessorMode(predecessorMode), problem(problem), expectedClass(expectedClass), expectedValue(expectedValue)
+TokenIterator::TokenIterator(std::shared_ptr<std::vector<Token>> tokenSequence, size_t position)
+: tokenSequence(tokenSequence), position(position)
 {}
 
-bool ParseError::isPredecessorMode() const
+std::shared_ptr<std::vector<Token>> TokenIterator::getTokenSequence() const
 {
-	return this->predecessorMode;
+	return this->tokenSequence;
 }
+
+size_t TokenIterator::getPosition() const
+{
+	return this->position;
+}
+
+SingleTokenView::SingleTokenView(const Token& token)
+: token(token)
+{}
+
+Token SingleTokenView::look(int32_t off) const
+{
+	if(off < 0)
+		return Token(Token::__NULL__, " ", 0);
+	else if(off > 0)
+		return Token(Token::END_OF_STREAM, " ", this->token.getLength() + 1);
+	else return this->token;
+}
+
+#define _END_OF_STREAM_POS		(this->tokenSequence->size() == 0 ? 0 :	this->tokenSequence \
+									->at(this->tokenSequence->size() - 1).after().getPosition())
+
+Token TokenIterator::look(int32_t off) const
+{
+	if(off < 0 && std::abs(off) > this->position)
+		return Token(Token::__NULL__, " ", 0);
+	size_t pos = std::min(this->position + off, this->tokenSequence->size());
+	if(pos == this->tokenSequence->size())
+		return Token(Token::END_OF_STREAM, " ", _END_OF_STREAM_POS);
+	else
+		return this->tokenSequence->at(pos);
+}
+
+Token TokenIterator::next()
+{
+	Token tok = this->look();
+	this->position++;
+	return tok;
+}
+
+Token TokenIterator::latest() const
+{
+	return this->look(-1);
+}
+
+Token TokenIterator::lookAhead() const
+{
+	return this->look();
+}
+
+TokenIterator TokenIterator::from(int32_t off) const
+{
+	return TokenIterator(this->tokenSequence, (size_t) std::max(0, (int32_t) this->position + off));
+}
+
+#define _EXPECTED_STR			(expectedValue.empty() ? Token::NICKNAMES.at(expectedClass) : expectedClass == Token::__NULL__ ? expectedValue : "\'" + expectedValue + "\'")
+#define _PROBLEM_STR			(problem.getClass() == Token::END_OF_STREAM ? "end-of-stream" : "token \'" + problem.getValue() + "\'")
+#define _PROBLEM_STR_NO_TOK		(problem.getClass() == Token::END_OF_STREAM ? "end-of-stream" : "\'" + problem.getValue() + "\'")
+
+std::string ParseError::getMessage(const Token& problem, Token::class_t expectedClass, const std::string& expectedValue, mode_t mode)
+{
+	switch(mode)
+	{
+		case EXPECTED_INSTEAD_OF:
+			return "Unexpected " + _PROBLEM_STR + ", expected " + _EXPECTED_STR;
+		case EXPECTED_AFTER:
+			return "Expected " + _EXPECTED_STR + " after " + _PROBLEM_STR_NO_TOK;
+		case EXPECTED_BEFORE:
+			return "Expected " + _EXPECTED_STR + " before " + _PROBLEM_STR_NO_TOK;
+		default:
+			return "<Invalid error object>";
+	}
+}
+
+ParseError::ParseError(const Token& problem, Token::class_t expectedClass, const std::string& expectedValue, mode_t mode)
+: APIError(getMessage(problem, expectedClass, expectedValue, mode)), problem(problem), expectedClass(expectedClass), expectedValue(expectedValue), mode(mode)
+{}
+
+ParseError::ParseError(const Token& problem, Token::class_t expectedClass, mode_t mode)
+: APIError(getMessage(problem, expectedClass, "", mode)),
+	problem(problem), expectedClass(expectedClass), expectedValue(""), mode(mode)
+{}
 
 Token ParseError::getProblem() const
 {
@@ -34,6 +110,146 @@ std::string ParseError::getExpectedValue() const
 	return this->expectedValue;
 }
 
+ParseError::mode_t ParseError::getMode() const
+{
+	return this->mode;
+}
+
+SourceSegment ParseError::getSegment() const
+{
+	return this->mode == EXPECTED_AFTER ? this->problem.after() : SourceSegment(this->problem);
+}
+
+Matcher::Matcher(Token::class_t _class, const std::string& value)
+: classes({ _class }), values({ value })
+{}
+
+Matcher::Matcher(const std::vector<Token::class_t>& classes, const std::vector<std::string>& values)
+: classes(classes), values(values)
+{}
+
+Matcher::Matcher(std::initializer_list<Token::class_t> classes, std::initializer_list<std::string> values)
+: classes(classes), values(values)
+{}
+
+const std::vector<Token::class_t>& Matcher::getClasses() const
+{
+	return this->classes;
+}
+
+const std::vector<std::string>& Matcher::getValues() const
+{
+	return this->values;
+}
+
+uint32_t Matcher::getLength() const
+{
+	return this->classes.size();
+}
+
+void Matcher::match(const TokenView& view, std::shared_ptr<SourceTable> sourceTable) const
+{
+	uint32_t length = this->classes.size();
+	for(uint32_t i = 0 ; i < length ; ++i)
+	{
+		Token::class_t _class = this->classes[i];
+		const std::string& value = i >= this->values.size() ? "" : this->values[i];
+		
+		Token tok = view.look(i);
+		
+		if(tok.getClass() == _class && (value.empty() || tok.getValue() == value))
+			continue;
+		
+		Token prev = view.look((int32_t) i - 1);
+		if(sourceTable != nullptr && sourceTable->getCoords(tok.getPosition()).row > sourceTable->getCoords(prev.getPosition()).row)
+			throw ParseError(prev, _class, value, ParseError::EXPECTED_AFTER);
+		else
+			throw ParseError(tok, _class, value, ParseError::EXPECTED_INSTEAD_OF);
+	}
+}
+
+bool Matcher::matches(const TokenView& view) const
+{
+	uint32_t length = this->classes.size();
+	for(uint32_t i = 0 ; i < length ; ++i)
+	{
+		Token::class_t _class = this->classes[i];
+		const std::string& value = i >= this->values.size() ? "" : this->values[i];
+		
+		Token tok = view.look(i);
+		
+		if(tok.getClass() == _class && (value.empty() || tok.getValue() == value))
+			continue;
+		return false;
+	}
+	return true;
+}
+
+void Matcher::match(const Token& token, std::shared_ptr<SourceTable> sourceTable) const
+{
+	this->match(SingleTokenView(token), sourceTable);
+}
+
+bool Matcher::matches(const Token& token) const
+{
+	return this->matches(SingleTokenView(token));
+}
+
+ParseError Matcher::getError(const TokenView& view, const std::string& expected) const
+{
+	assert(!this->classes.empty(), "Matcher must match at least one token");
+	Token::class_t _class = !expected.empty() ? Token::__NULL__ : this->classes[0];
+	const std::string& value = !expected.empty() ? expected : this->values.empty() ? "" : this->values[0];
+	
+	return ParseError(view.look(), _class, value, ParseError::EXPECTED_BEFORE);
+}
+
+RecoveryInterrupt::RecoveryInterrupt(std::unique_ptr<TokenView> view)
+: view(std::move(view))
+{}
+
+const TokenView& RecoveryInterrupt::getView() const
+{
+	return *this->view;
+}
+
+ScopeDetector& ScopeDetector::withScope(const Matcher& opener, const Matcher& closer)
+{
+	this->openers.push_back(opener);
+	this->closers.push_back(closer);
+	this->counters.push_back(0);
+	return *this;
+}
+
+bool ScopeDetector::processNext(const TokenView& view)
+{
+	bool scopeAltered = false;
+	for(uint32_t i = 0 ; i < this->counters.size() ; ++i)
+	{
+		const auto& opener = this->openers[i];
+		const auto& closer = this->closers[i];
+		if(opener.matches(view))
+		{
+			this->counters[i]++;
+			scopeAltered = true;
+		}
+		if(this->counters[i] && closer.matches(view))
+		{
+			this->counters[i]--;
+			scopeAltered = true;
+		}
+	}
+	return scopeAltered;
+}
+
+bool ScopeDetector::isInScope() const
+{
+	for(uint32_t counter : this->counters)
+		if(counter)
+			return true;
+	return false;
+}
+
 #define __PARSER_CTX_FN												\
 	[this](err::PTR_ErrorContextLayer ptr) {						\
 		return !this->invsegActive ? std::move(ptr)					\
@@ -41,9 +257,10 @@ std::string ParseError::getExpectedValue() const
 				this->invseg, this->buildInfo.sourceTable);			\
 	}
 
+
 Parser::Parser(build_info_t& buildInfo, err::ErrorSentinel* parentSentinel)
 : buildInfo(buildInfo), sentinel(parentSentinel, err::ErrorSentinel::COLLECT, __PARSER_CTX_FN),
-	position(0), invsegActive(false), invseg(0, 0)
+	iterator(buildInfo.tokenSequence), invsegActive(false), invseg(0, 0), sufficiencyFlag(false)
 {}
 
 const build_info_t& Parser::getBuildInfo() const
@@ -71,353 +288,220 @@ std::unique_ptr<ASTNode>& Parser::getOutput()
 	return this->output;
 }
 
-#define _END_OF_STREAM_POS		(this->buildInfo.tokenSequence->size() == 0 ? 0 :		\
-									this->buildInfo.tokenSequence->at(this->buildInfo	\
-									.tokenSequence->size() - 1).after().getPosition())
-
-Token Parser::next()
+const TokenIterator& Parser::getIterator() const
 {
-	if(this->position < this->buildInfo.tokenSequence->size())
-		return (*this->buildInfo.tokenSequence)[this->position++];
-	else
-		return Token(Token::END_OF_STREAM, " ", _END_OF_STREAM_POS); 
+	return this->iterator;
 }
 
-Token Parser::latest() const
+TokenIterator& Parser::getIterator()
 {
-	if(this->position == 0)
-		return Token(Token::__NULL__, " ", 0);
-	else if(this->position >= this->buildInfo.tokenSequence->size())
-		return (*this->buildInfo.tokenSequence)[this->buildInfo.tokenSequence->size() - 1];
-	else
-		return (*this->buildInfo.tokenSequence)[this->position - 1];
+	return this->iterator;
 }
 
-Token Parser::lookAhead() const
+#define __SUFF_STOREID				__sufficiency_StoreID__
+#define __CHECK_SUFFICIENCY_FLAG	bool __SUFF_STOREID = this->sufficiencyFlag;	\
+									this->sufficiencyFlag = false;
+#define __SUFFICIENCY_MET			if(__SUFF_STOREID && !this->stack.empty())		\
+										this->stack.top()->sufficient = true;
+
+void Parser::match(const Matcher& matcher)
 {
-	if(this->position < this->buildInfo.tokenSequence->size())
-		return (*this->buildInfo.tokenSequence)[this->position];
-	else
-		return Token(Token::END_OF_STREAM, " ", _END_OF_STREAM_POS); 
+	__CHECK_SUFFICIENCY_FLAG
+	matcher.match(this->iterator, this->buildInfo.sourceTable);
+	__SUFFICIENCY_MET
+	this->iterator.position += matcher.getLength();
 }
 
-#define _MATCH_COND(_Tok, _Class, _Value)			( (_Tok).getClass() == (_Class) && ((_Value).empty() || (_Tok).getValue() == (_Value)) )
-#define _PARSE_THROW(_Tok, _Class, _Value, _Suf)	throw ParseError(_Tok, _Class, _Value _Suf)
-
-void Parser::match(Token::class_t _class, const std::string& value)
+void Parser::matchLookAhead(const Matcher& matcher)
 {
-	auto tmpPos = this->position;
-	auto next = this->next();
-	if(!_MATCH_COND(next, _class, value))
+	__CHECK_SUFFICIENCY_FLAG
+	matcher.match(this->iterator, this->buildInfo.sourceTable);
+	__SUFFICIENCY_MET
+}
+
+void Parser::matchLatest(const Matcher& matcher)
+{
+	__CHECK_SUFFICIENCY_FLAG
+	matcher.match(this->iterator.from(-1), this->buildInfo.sourceTable);
+	__SUFFICIENCY_MET
+}
+
+bool Parser::matches(const Matcher& matcher)
+{
+	__CHECK_SUFFICIENCY_FLAG
+	if(matcher.matches(this->iterator))
 	{
-		this->position = tmpPos;
-		_PARSE_THROW(next, _class, value, );
-	}
-}
-
-void Parser::matchLast(Token::class_t _class, const std::string& value)
-{
-	auto tmpPos = this->position;
-	if(!_MATCH_COND(this->next(), _class, value))
-	{
-		this->position = tmpPos;
-		_PARSE_THROW(this->latest(), _class, value, _LAST_ARG(true));
-	}
-}
-
-void Parser::match(const Token& token, Token::class_t _class, const std::string& value) const
-{
-	if(!_MATCH_COND(token, _class, value))
-		_PARSE_THROW(token, _class, value, );
-}
-
-void Parser::matchLookAhead(Token::class_t _class, const std::string& value) const
-{
-	auto lookAhead = this->lookAhead();
-	if(!_MATCH_COND(lookAhead, _class, value))
-		_PARSE_THROW(lookAhead, _class, value, );
-}
-
-void Parser::matchLatest(Token::class_t _class, const std::string& value) const
-{
-	auto latest = this->latest();
-	if(!_MATCH_COND(latest, _class, value))
-		_PARSE_THROW(latest, _class, value, );
-}
-
-bool Parser::matches(Token::class_t _class, const std::string& value)
-{
-	auto lookAhead = this->lookAhead();
-	if(_MATCH_COND(lookAhead, _class, value))
-	{
-		this->next();
+		__SUFFICIENCY_MET
+		this->iterator.position += matcher.getLength();
 		return true;
 	}
 	return false;
 }
 
-bool Parser::matches(const Token& token, Token::class_t _class, const std::string& value) const
+bool Parser::matchesLookAhead(const Matcher& matcher)
 {
-	return _MATCH_COND(token, _class, value);
-}
-
-bool Parser::matchesLookAhead(Token::class_t _class, const std::string& value) const
-{
-	return _MATCH_COND(this->lookAhead(), _class, value);
-}
-
-bool Parser::matchesLatest(Token::class_t _class, const std::string& value) const
-{
-	return _MATCH_COND(this->latest(), _class, value);
-}
-
-void Parser::matchAll(std::initializer_list<Token::class_t> _classes, std::initializer_list<std::string> values, bool advance)
-{
-	uint32_t tmpPos = this->position, i = 0;
-	for(const auto& _class : _classes)
+	__CHECK_SUFFICIENCY_FLAG
+	if(matcher.matches(this->iterator))
 	{
-		auto next = this->next();
-		auto value = i >= values.size() ? "" : *(values.begin() + i);
-		
-		if(!_MATCH_COND(next, _class, value))
-		{
-			this->position = tmpPos;
-			_PARSE_THROW(next, _class, value, );
-		}
-		i++;
+		__SUFFICIENCY_MET
+		return true;
 	}
-	if(!advance)
-		this->position = tmpPos;
+	return false;
 }
 
-bool Parser::matchesAll(std::initializer_list<Token::class_t> _classes, std::initializer_list<std::string> values, bool advance)
+bool Parser::matchesLatest(const Matcher& matcher)
 {
-	uint32_t tmpPos = this->position, i = 0;
-	for(const auto& _class : _classes)
+	__CHECK_SUFFICIENCY_FLAG
+	if(matcher.matches(this->iterator.from(-1)))
 	{
-		auto next = this->next();
-		auto value = i >= values.size() ? "" : *(values.begin() + i);
-		
-		if(!_MATCH_COND(next, _class, value))
-		{
-			this->position = tmpPos;
-			return false;
-		}
+		__SUFFICIENCY_MET
+		return true;
 	}
-	if(!advance)
-		this->position = tmpPos;
-	return true;
+	return false;
 }
 
-void Parser::match(std::unique_ptr<ASTNode> node, bool saveNode)
+#define __PUSH_ALL																	\
+	{																				\
+		this->stack.push(std::move(node));											\
+		this->recoveryTokens.insert(this->recoveryTokens.end(), __recoveryTokens);	\
+	}
+
+#define __POP_ALL																	\
+	{																				\
+		this->stack.pop();															\
+		this->recoveryTokens.erase(this->recoveryTokens.end() - __recoveryTokens	\
+			.size(), this->recoveryTokens.end());									\
+		while(this->positions.size() > positionStackSize)							\
+			this->positions.pop();													\
+	}
+
+#define __POP_AND_HANDLE_NODE														\
+	node = std::move(this->stack.top());											\
+	if(node->isSufficient())														\
+	{																				\
+		__POP_ALL																	\
+		__SUFFICIENCY_MET															\
+		if(!saveNode)																\
+			return;																	\
+		if(!this->stack.empty())													\
+		{																			\
+			if(node->isHelper())													\
+				std::move(std::begin(node->children), std::end(node->children),		\
+					std::back_inserter(this->stack.top()->children));				\
+			else																	\
+				this->stack.top()->children.push_back(std::move(node));				\
+		}																			\
+		else																		\
+			this->output = std::move(node);											\
+	}																				\
+	else __POP_ALL
+
+void Parser::matchInternal(std::unique_ptr<ASTNode> node, std::initializer_list<Matcher> __recoveryTokens, bool saveNode)
 {
-	ASTNode& nodeRef = *node;
-	nodeRef.segment = this->lookAhead();
-	uint32_t fallbackPosition = this->position;
-	this->stack.push(std::move(node));
+	__CHECK_SUFFICIENCY_FLAG
+	node->segment = this->iterator.lookAhead();
+	size_t positionStackSize = this->positions.size();
 	
+	__PUSH_ALL
 	try
 	{
-		nodeRef.parse(*this);
+		this->stack.top()->parse(*this);
+		__POP_AND_HANDLE_NODE
 	}
-	catch(const ParseError& err)
+	catch(const ParseError& error)
 	{
-		this->stack.pop();
-		this->position = fallbackPosition;
+		__POP_AND_HANDLE_NODE
 		throw;
 	}
-	
-	node = std::move(this->stack.top());
-	this->stack.pop();
-	if(!saveNode)
-		return;
-	
+	catch(const RecoveryInterrupt& interrupt)
+	{
+		__POP_AND_HANDLE_NODE
+		for(const auto& matcher : __recoveryTokens)
+			if(matcher.matches(interrupt.getView()))
+				return;
+		throw;
+	}
+	catch(...) __POP_ALL
+}
+
+void Parser::match(std::unique_ptr<ASTNode> node, std::initializer_list<Matcher> __recoveryTokens)
+{
+	matchInternal(std::move(node), __recoveryTokens, true);
+}
+
+void Parser::matchStateless(std::unique_ptr<ASTNode> node, std::initializer_list<Matcher> __recoveryTokens)
+{
+	matchInternal(std::move(node), __recoveryTokens, false);
+}
+
+void Parser::nextIsSufficient()
+{
+	this->sufficiencyFlag = true;
+}
+
+void Parser::nowIsSufficient()
+{
 	if(!this->stack.empty())
-	{
-		if(node->isHelper())
-			std::move(std::begin(node->children), std::end(node->children), std::back_inserter(this->stack.top()->children));
-		else
-			stack.top()->children.push_back(std::move(node));
-	}
-	else
-		this->output = std::move(node);
+		this->stack.top()->sufficient = true;
 }
 
-bool Parser::matches(std::unique_ptr<ASTNode> node, bool saveNode)
+bool Parser::panicUntil(const Matcher& matcher, bool silent, ScopeDetector detector)
 {
-	try
-	{
-		match(std::move(node), saveNode);
-		return true;
-	}
-	catch(const ParseError&)
-	{
-		return false;
-	}
+	return panicUntil({matcher}, "", silent, detector);
 }
 
-#define __OPEN_COND__(_Tok, _Cl, _Var)			\
-		if(matches(_Tok, Token::_Cl))			\
-			_Var++;
-
-#define __CLOSE_COND__(_Tok, _Cl, _Var, _Ctrl)	\
-		if(matches(_Tok, Token::_Cl))			\
-		{										\
-			if(ctrl | scopectrl::_Ctrl)			\
-			{									\
-				if(_Var) _Var--;				\
-				else return moved;				\
-			}									\
-		}
-
-#define _DECLARE_SCOPES				\
-		uint32_t	paren = 0,		\
-					bracket = 0,	\
-					brace = 0,		\
-					diamond = 0;
-
-#define _ALL_CONDS(_Tok)																\
-		__OPEN_COND__(_Tok, DELIM_OPEN_PARENTHESIS, paren)								\
-		else __OPEN_COND__(_Tok, DELIM_OPEN_BRACKET, bracket)							\
-		else __OPEN_COND__(_Tok, DELIM_OPEN_BRACE, brace)								\
-		else __OPEN_COND__(_Tok, OPERATOR_LESS, diamond)								\
-		else __CLOSE_COND__(_Tok, DELIM_CLOSE_PARENTHESIS, paren, OUTER_PARENTHESES)	\
-		else __CLOSE_COND__(_Tok, DELIM_CLOSE_BRACKET, bracket, OUTER_BRACKETS)			\
-		else __CLOSE_COND__(_Tok, DELIM_CLOSE_BRACE, brace, OUTER_BRACES)				\
-		else __CLOSE_COND__(_Tok, OPERATOR_GREATER, diamond, OUTER_DIAMONDS)
-
-#define _CONTINUE_COND (										\
-		(paren && (ctrl | scopectrl::INNER_PARENTHESES))		\
-		|| (bracket && (ctrl | scopectrl::INNER_BRACKETS))		\
-		|| (brace && (ctrl | scopectrl::INNER_BRACES))			\
-		|| (diamond && (ctrl | scopectrl::INNER_DIAMONDS)) )
-
-bool Parser::panicUntil(Token::class_t _class, const std::string& value, scopectrl::type ctrl)
+bool Parser::panicUntil(std::initializer_list<Matcher> matchers, const std::string& expected, bool silent, ScopeDetector detector)
 {
+	assert(matchers.size() > 0, "Must panic with at least one matcher");
 	bool moved = false;
-	_DECLARE_SCOPES while((!matchesLookAhead(_class, value) || _CONTINUE_COND) && !matchesLookAhead(Token::END_OF_STREAM))
+	for(;;)
 	{
-		auto lookAhead = this->lookAhead();
-		_ALL_CONDS(lookAhead)
-		this->next();
-		moved = true;
-	}
-	return moved;
-}
-
-bool Parser::panicUntil(Token::class_t _class, scopectrl::type ctrl)
-{
-	return panicUntil(_class, "", ctrl);
-}
-
-bool Parser::panicUntil(std::initializer_list<Token::class_t> _classes, std::initializer_list<std::string> values, scopectrl::type ctrl)
-{
-	if(!_classes.size())
-		return false;
-	auto _class = *_classes.begin();
-	auto value = !values.size() ? "" : *values.begin();
-	bool moved = false;
-	
-	_DECLARE_SCOPES for(;;)
-	{
-		while((!matchesLookAhead(_class, value) || _CONTINUE_COND) && !matchesLookAhead(Token::END_OF_STREAM))
-		{
-			auto lookAhead = this->lookAhead();
-			_ALL_CONDS(lookAhead)
-			this->next();
-			moved = true;
-		}
+		if(detector.processNext(this->iterator))
+			goto end;
 		
-		if(matchesLookAhead(Token::END_OF_STREAM))
+		if(!detector.isInScope())
+		{
+			for(const auto& matcher : matchers)
+				if(matcher.matches(this->iterator))
+					return moved;
+		}
+		for(const auto& recoveryMatcher : this->recoveryTokens)
+		{
+			if(recoveryMatcher.matches(this->iterator))
+			{
+				if(moved && !silent) this->report((*matchers.begin()).getError(this->iterator, expected));
+				throw RecoveryInterrupt(std::make_unique<TokenIterator>(this->iterator));
+			}
+		}
+		if(this->iterator.lookAhead().getClass() == Token::END_OF_STREAM) // Just here for redudancy, END_OF_STREAM should always be a recovery token
 			return moved;
 		
-		uint32_t tmpPos = this->position;
-		if(matchesAll(_classes, values))
-		{
-			this->position = tmpPos;
-			return moved;
-		}
-	}
-}
-
-bool Parser::panicUntil(std::initializer_list<Token::class_t> _classes, scopectrl::type ctrl)
-{
-	return panicUntil(_classes, {}, ctrl);
-}
-
-static bool anyMatches(const Token& tok, std::initializer_list<Token::class_t> _classes, std::initializer_list<std::string> values)
-{
-	uint32_t i = 0;
-	for(Token::class_t _class : _classes)
-	{
-		if(_MATCH_COND(tok, _class, i >= values.size() ? "" : *(values.begin() + i)))
-			return true;
-		++i;
-	}
-	return false;
-}
-
-bool Parser::panicUntilAny(std::initializer_list<Token::class_t> _classes, std::initializer_list<std::string> values, scopectrl::type ctrl)
-{
-	bool moved = false;
-	_DECLARE_SCOPES while((!anyMatches(this->lookAhead(), _classes, values) || _CONTINUE_COND) && !matchesLookAhead(Token::END_OF_STREAM))
-	{
-		auto lookAhead = this->lookAhead();
-		_ALL_CONDS(lookAhead)
-		this->next();
+		end:
+		this->iterator.next();
 		moved = true;
 	}
-	return moved;
 }
 
-bool Parser::panicUntilAny(std::initializer_list<Token::class_t> _classes, scopectrl::type ctrl)
-{
-	return panicUntilAny(_classes, {}, ctrl);
-}
-
-ParseError Parser::getFallbackError(const std::string& expected) const
+void Parser::fallback(const std::string& expected, ParseError::mode_t mode) const
 {
 	if(expected.empty())
 		assert(!this->stack.empty(), "Stack must not be empty for implicit fallback");
-	return ParseError(this->lookAhead(), Token::class_t::__NULL__,
-		expected.empty() ? this->stack.top()->getRuleName() : expected);
+	throw ParseError(this->iterator.lookAhead(), Token::__NULL__,
+		expected.empty() ? this->stack.top()->getRuleName() : expected, mode);
 }
 
-void Parser::fallback(const std::string& expected) const
-{
-	throw getFallbackError(expected);
-}
-
-void Parser::reassociatePreUnary(uint32_t pos)
+void Parser::reassociateUnder(uint32_t target)
 {
 	assert(!this->stack.empty(), "Node stack must not be empty");
 	const auto& parent = this->stack.top();
-	assert(parent->getDegree() >= pos + 2, "Reassociation requires two children nodes");
+	assert(target < parent->getDegree(), "Parent node must contain reassociation target");
 	
-	parent->children[pos]->children.push_back(std::move(parent->children[pos + 1]));
-	parent->children.erase(parent->children.begin() + pos + 1);
-}
-
-void Parser::reassociatePostUnary(uint32_t pos)
-{
-	assert(!this->stack.empty(), "Node stack must not be empty");
-	const auto& parent = this->stack.top();
-	assert(parent->getDegree() >= pos + 2, "Reassociation requires two children nodes");
-	
-	parent->children[pos + 1]->children.push_back(std::move(parent->children[pos]));
-	parent->children.erase(parent->children.begin() + pos);
-}
-
-void Parser::reassociateBinary(uint32_t pos)
-{
-	assert(!this->stack.empty(), "Node stack must not be empty");
-	const auto& parent = this->stack.top();
-	assert(parent->getDegree() >= pos + 3, "Reassociation requires three children nodes");
-	
-	parent->children[pos + 1]->children.push_back(std::move(parent->children[pos]));
-	parent->children[pos + 1]->children.push_back(std::move(parent->children[pos + 2]));
-	parent->children.erase(parent->children.begin() + pos + 2);
-	parent->children.erase(parent->children.begin() + pos);
+	const auto& targetPtr = parent->children[target];
+	for(auto& childPtr : parent->children)
+		if(childPtr != targetPtr)
+			targetPtr->children.push_back(std::move(childPtr));
+	parent->children.erase(parent->children.begin() + target + 1, parent->children.end());
+	parent->children.erase(parent->children.begin(), parent->children.begin() + target);
 }
 
 void Parser::overrideSegment(const SourceSegment& segment)
@@ -428,10 +512,29 @@ void Parser::overrideSegment(const SourceSegment& segment)
 
 void Parser::report(const ParseError& error)
 {
-	this->invseg = error.isPredecessorMode() ? error.getProblem().after() : error.getProblem();
+	this->invseg = error.getSegment();
 	this->invsegActive = true;
 	this->sentinel.raise(error);
 	this->invsegActive = false;
+}
+
+void Parser::mark()
+{
+	this->positions.push(this->iterator.position);
+}
+
+void Parser::unmark()
+{
+	assert(!this->positions.empty(), "Backtracking position is not marked");
+	this->positions.pop();
+}
+
+void Parser::backtrack()
+{
+	assert(!this->positions.empty(), "Backtracking position is not marked");
+	this->iterator.position = this->positions.top();
+	this->positions.pop();
+	throw BacktrackInterrupt();
 }
 
 void services::parse(build_info_t& info, err::ErrorSentinel* parentSentinel)

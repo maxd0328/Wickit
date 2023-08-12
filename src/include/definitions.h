@@ -41,6 +41,9 @@ typedef uint32_t    enum_t;
 #define _INIT(...)						{ __VA_ARGS__ }
 #define _LAST_ARG(_Arg)					, _Arg
 
+#define __COUNT_VA_ARGS_IMPL__(_1, _2, _3, _4, _5, _6, _7, _8, _9, _a, _b, _c, _d, _e, _f, N, ...) N
+#define COUNT_VA_ARGS(...)				__COUNT_VA_ARGS_IMPL__(__VA_ARGS__, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
+
 // Module IDs
 #define _MODULEID_FIRST		0
 #define _MODULEID_NPOS		( (moduleid_t) -1 )

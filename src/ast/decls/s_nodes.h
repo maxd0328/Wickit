@@ -8,8 +8,6 @@ namespace wckt::ast
 	{
 		public:
 			S_NamespaceDecl();
-			~S_NamespaceDecl() = default;
-			
 			void parse(build::Parser& parser) override;
 	};
 
@@ -17,8 +15,23 @@ namespace wckt::ast
 	{
 		public:
 			S_TypeDecl();
-			~S_TypeDecl() = default;
-
+			void parse(build::Parser& parser) override;
+	};
+	
+	class S_PropertyDecl : public build::ASTNode
+	{
+		private:
+			bool allowInitializer;
+			
+		public:
+			S_PropertyDecl(bool allowInitializer);
+			void parse(build::Parser& parser) override;
+	};
+	
+	class S_Extends : public build::ASTNode
+	{
+		public:
+			S_Extends();
 			void parse(build::Parser& parser) override;
 	};
 }

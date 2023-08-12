@@ -47,10 +47,10 @@ ValuedPropertyDeclaration:
     ValuedVarDecl ;
 
 TypeDeclaration:
-    type Identifier [GenericTypeDeclarator] as TypeNoOptional ;
+    type Identifier [GenericTypeDeclarator] as Type ;
 
 ContractDeclaration:
-    contract Identifier [GenericTypeDeclarator] [extends TypeListNoOptional] { { GlobalScopeDeclaration } }
+    contract Identifier [GenericTypeDeclarator] [extends TypeList] { { GlobalScopeDeclaration } }
 
 FunctionDeclaration:
     function Identifier [GenericTypeDeclarator] ([Parameters]): (Type|void) Block
@@ -68,7 +68,7 @@ SwitchConstructorDeclaration:
     switch constructor Identifier { { SwitchFunctionCase } }
 
 TemplateDeclaration:
-    template Identifier [GenericTypeDeclarator] [extends TypeListNoOptional] { { TemplateScopeDeclaration } }
+    template Identifier [GenericTypeDeclarator] [extends TypeList] { { TemplateScopeDeclaration } }
 
 TemplateScopeDeclaration:
     GlobalScopeDeclaration
@@ -99,36 +99,30 @@ Modifier:
 
 ```
 Type:
-    TypeDisjunction [?]
-
-TypeNoOptional:
     TypeDisjunction
 
 TypeDisjunction:
     TypeConjunction { | TypeConjunction }
 
 TypeConjunction:
-    PostfixType { & TypeConjunction }
+    FunctionType { & TypeConjunction }
+
+FunctionType:
+	([TypeList]) [GenericTypeDeclarator] -> (PostfixType|void)
+	PostfixType -> (PostfixType|void)
+	PostfixType
 
 PostfixType:
-    UnitType { [] }
+    UnitType { ([]|?) }
 
 UnitType:
     StaticSymbol [GenericTypeSpecifier]
-    FunctionType
     ContractType
     SwitchFunctionType
-    (TypeNoOptional)
-
-FunctionType:
-    ([TypeList]) [GenericTypeDeclarator] -> (Type|void)
-    Type [GenericTypeDeclarator] -> (Type|void)
+    (Type)
 
 ContractType:
-    contract [extends TypeListNoOptional] { { AbstractPropertyDeclaration } }
-
-TypeScopeDeclaration:
-    {Modifier} AbstractPropertyDeclaration
+    contract [extends TypeList] { { AbstractPropertyDeclaration } }
 
 SwitchFunctionType:
     switch function { { AbstractSwitchFunctionCase } }
@@ -327,9 +321,6 @@ StaticSymbol:
 TypeList:
     Type { , Type }
 
-TypeListNoOptional:
-    TypeNoOptional { , TypeNoOptional }
-
 Parameters:
     AbstractVarDecl { , AbstractVarDecl }
 
@@ -364,7 +355,7 @@ The following gives some interpretations and patterns drawn from the above synta
 | Level | Operator | Description         | Associativity |
 | ----- | -------- | ------------------- | ------------- |
 | 16 | `()`<br>`new` | Parentheses<br>Instantiation | Left-to-right |
-| 15 | `.`<br>`[]`<br>`()` | Member access<br>Array access<br>Function call | Left-to-right
+| 15 | `.`<br>`[]`<br>`()` | Member access<br>Subscript<br>Function call | Left-to-right
 | 14 | `++`<br>`--` | Post-increment<br>Post-decrement | Left-to-right
 | 13 | `+`<br>`-`<br>`!`<br>`~`<br>`++`<br>`--` | Unary plus<br>Unary minus<br>Logical not<br>Bitwise not<br>Pre-increment<br>Pre-decrement | Right-to-left
 | 12 | `()` | Type cast | Right-to-left |
@@ -385,8 +376,8 @@ The following gives some interpretations and patterns drawn from the above synta
 
 | Level | Operator | Description         | Associativity |
 | ----- | -------- | ------------------- | ------------- |
-| 4 | `->`<br>`.`<br>`()` | Function type<br>Static access<br>Parentheses | Left-to-right |
-| 3 | `[]` | Array postfix | Left-to-right |
-| 2 | `&` | Conjunction | Left-to-right |
-| 1 | `\|` | Disjunction | Left-to-right |
-| 0 | `?` | Optional type | N/A |
+| 4 | `.`<br>`()` | Static access<br>Parentheses | Left-to-right |
+| 3 | `[]`<br>`?` | Array postfix<br>Optional postfix | Left-to-right |
+| 2 | `->` | Function type | N/A |
+| 1 | `&` | Conjunction | Left-to-right |
+| 0 | `\|` | Disjunction | Left-to-right |

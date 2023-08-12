@@ -1,4 +1,4 @@
-#include "ast/ast_util.h"
+#include "ast/general/s_util.h"
 
 using namespace wckt;
 using namespace wckt::ast;
@@ -21,10 +21,11 @@ void S_StaticSymbol::parse(Parser& parser)
 	do
 	{
 		parser.match<S_Identifier>();
-		if(parser.matchesAll({Token::DELIM_DOT, Token::OPERATOR_MUL}, {}, false))
+		if(parser.matches({Token::DELIM_DOT, Token::OPERATOR_MUL}))
 			break;
 	}
 	while(parser.matches(Token::DELIM_DOT));
+	SUFFICIENT_NOW
 	SEGMENT_END
 }
 
@@ -36,8 +37,8 @@ std::string S_Identifier::getValue() const
 
 void S_Identifier::parse(Parser& parser)
 {
-	parser.match(Token::IDENTIFIER);
-	this->value = parser.latest().getValue();
+	SUFFICIENT_IF parser.match(Token::IDENTIFIER);
+	this->value = parser.getIterator().latest().getValue();
 }
 
 std::string S_Identifier::toString() const
