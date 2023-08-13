@@ -169,14 +169,14 @@ Expression6:
     Expression7 { & Expression7 }
 
 Expression7:
-    Expression8 { (==|!=) Expression8 }
+    Expression8 { (==|!=|===|!==) Expression8 }
 
 Expression8:
     Expression9 { Expression8Rest }
 
 Expression8Rest:
     (>|>=|<|<=) Expression9
-    satisfies Type
+    satisfies ( Type )
 
 Expression9:
     Expression10 { (<<|>>) Expression10 }
@@ -188,7 +188,7 @@ Expression11:
     Expression12 { (*|/|%) Expression12 }
 
 Expression12:
-    (Type) Expression12
+    < Type > Expression12
     Expression13
 
 Expression13:
@@ -237,12 +237,12 @@ ArrowParameters:
 
 ConstructorInvocation:
     StaticSymbol [GenericTypeSpecifier] [ ([Expressions]) ] [ ObjectLiteral ]
-```
 
 PropertyName:
     Identifier
     constructor
     conflict
+```
 
 ## 5. Statements
 
@@ -363,7 +363,7 @@ The following gives some interpretations and patterns drawn from the above synta
 | 10 | `+ -` | Additive | Left-to-right |
 | 9 | `<< >>` | Shift | Left-to-right |
 | 8 | `> >= < <=`<br>`satisfies` | Relational<br>Satisfaction | Left-to-right |
-| 7 | `== !=` | Equality | Left-to-right |
+| 7 | `== != === !==` | Equality | Left-to-right |
 | 6 | `&` | AND | Left-to-right |
 | 5 | `^` | XOR | Left-to-right |
 | 4 | `\|` | OR | Left-to-right |

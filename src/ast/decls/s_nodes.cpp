@@ -67,15 +67,26 @@ void S_TypeDecl::parse(Parser& parser)
 	}
 }
 
-S_PropertyDecl::S_PropertyDecl(bool allowInitializer)
-: ASTNode("property-declaration"), allowInitializer(allowInitializer)
+S_PropertyDecl::S_PropertyDecl(bool allowInitializer, bool backtrack)
+: ASTNode("property-declaration"), allowInitializer(allowInitializer), backtrack(backtrack)
 {}
 
 void S_PropertyDecl::parse(Parser& parser)
 {
+	if(backtrack)
+		parser.mark();
 	try
 	{
-		SUFFICIENT_IF parser.match<S_Identifier>();
+		try { SUFFICIENT_IF parser.match<S_Identifier>(); }
+		catch(const ParseError& err)
+		{
+			if(backtrack)
+				parser.backtrack();
+			else throw;
+		}
+		if(backtrack)
+			parser.unmark();
+		
 		if(this->allowInitializer)
 		{
 			parser.match(Token::DELIM_COLON);

@@ -73,7 +73,11 @@ void S_DeclarationSet::parse(Parser& parser)
 				parser.match<S_NamespaceDecl>(starters);
 			else if(parser.matchesLookAhead(Token::KEYW_TYPE))
 				parser.match<S_TypeDecl>(starters);
-			else parser.fallback("declaration");
+			else
+			{
+				try { parser.match<S_PropertyDecl>(starters, true, true); }
+				catch(const BacktrackInterrupt&) { parser.fallback("declaration"); }
+			}
 		}
 		catch(const ParseError& err)
 		{

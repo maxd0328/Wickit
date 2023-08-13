@@ -497,9 +497,11 @@ void Parser::reassociateUnder(uint32_t target)
 	assert(target < parent->getDegree(), "Parent node must contain reassociation target");
 	
 	const auto& targetPtr = parent->children[target];
-	for(auto& childPtr : parent->children)
-		if(childPtr != targetPtr)
-			targetPtr->children.push_back(std::move(childPtr));
+	targetPtr->children.insert(targetPtr->children.begin(), std::make_move_iterator(parent
+		->children.begin()), std::make_move_iterator(parent->children.begin() + target));
+	targetPtr->children.insert(targetPtr->children.end(), std::make_move_iterator(parent
+		->children.begin() + target + 1), std::make_move_iterator(parent->children.end()));
+	
 	parent->children.erase(parent->children.begin() + target + 1, parent->children.end());
 	parent->children.erase(parent->children.begin(), parent->children.begin() + target);
 }

@@ -87,7 +87,7 @@ void S_ContractType::parse(Parser& parser)
 		PARSER_REPORT_RETURN(parser.match(Token::DELIM_OPEN_BRACE));
 	}
 	while(!parser.matchesLookAhead(Token::DELIM_CLOSE_BRACE) && !parser.matchesLookAhead(Token::END_OF_STREAM))
-		parser.match<S_PropertyDecl>({Token::DELIM_CLOSE_BRACE}, false);
+		parser.match<S_PropertyDecl>({Token::DELIM_CLOSE_BRACE}, false, false);
 	PARSER_REPORT(parser.match(Token::DELIM_CLOSE_BRACE));
 }
 

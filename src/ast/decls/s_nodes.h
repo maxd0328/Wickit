@@ -22,9 +22,10 @@ namespace wckt::ast
 	{
 		private:
 			bool allowInitializer;
+			bool backtrack;
 			
 		public:
-			S_PropertyDecl(bool allowInitializer);
+			S_PropertyDecl(bool allowInitializer, bool backtrack);
 			void parse(build::Parser& parser) override;
 	};
 	
