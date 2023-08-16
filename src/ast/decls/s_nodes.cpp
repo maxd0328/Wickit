@@ -2,6 +2,7 @@
 #include "ast/general/s_util.h"
 #include "ast/general/s_nodes.h"
 #include "ast/types/s_nodes.h"
+#include "ast/expr/s_values.h"
 
 using namespace wckt;
 using namespace wckt::ast;
@@ -67,8 +68,8 @@ void S_TypeDecl::parse(Parser& parser)
 	}
 }
 
-S_PropertyDecl::S_PropertyDecl(bool allowInitializer, bool backtrack)
-: ASTNode("property-declaration"), allowInitializer(allowInitializer), backtrack(backtrack)
+S_PropertyDecl::S_PropertyDecl(behavior_t behavior, bool backtrack)
+: ASTNode("property-declaration"), behavior(behavior), backtrack(backtrack)
 {}
 
 void S_PropertyDecl::parse(Parser& parser)
@@ -87,16 +88,31 @@ void S_PropertyDecl::parse(Parser& parser)
 		if(backtrack)
 			parser.unmark();
 		
-		if(this->allowInitializer)
+		switch(this->behavior)
 		{
-			parser.match(Token::DELIM_COLON);
-			parser.match<S_Type>({Token::DELIM_SEMICOLON /*, Token::OPERATOR_EQUALS*/});
-			// TODO initializer once we have expressions
-		}
-		else
-		{
-			parser.match(Token::DELIM_COLON);
-			parser.match<S_Type>({Token::DELIM_SEMICOLON});
+			case DISALLOW_INITIALIZER:
+				if(!parser.matches(Token::DELIM_COLON))
+					parser.fallback("type");
+				parser.match<S_Type>({Token::DELIM_SEMICOLON});
+				break;
+			case ALLOW_INITIALIZER:
+				if(parser.matches(Token::DELIM_COLON))
+				{
+					parser.match<S_Type>({Token::DELIM_SEMICOLON, Token::OPERATOR_ASSIGN});
+					if(parser.matches(Token::OPERATOR_ASSIGN))
+						parser.match<S_Expression>({Token::DELIM_SEMICOLON});
+				}
+				else if(parser.matches(Token::OPERATOR_ASSIGN))
+					parser.match<S_Expression>({Token::DELIM_SEMICOLON});
+				else parser.fallback("type or initializer");
+				break;
+			case REQUIRE_INITIALIZER:
+				if(parser.matches(Token::DELIM_COLON))
+					parser.match<S_Type>({Token::DELIM_SEMICOLON, Token::OPERATOR_ASSIGN});
+				if(!parser.matches(Token::OPERATOR_ASSIGN))
+					parser.fallback("initializer");
+				parser.match<S_Expression>({Token::DELIM_SEMICOLON});
+				break;
 		}
 		parser.match(Token::DELIM_SEMICOLON);
 	}
@@ -118,4 +134,37 @@ void S_Extends::parse(Parser& parser)
 	
 	do { parser.match<S_Type>(); }
 	while(parser.matches(Token::DELIM_COMMA));
+}
+
+S_FunctionArgs::S_FunctionArgs()
+: ASTNode("function-args") {}
+
+void S_FunctionArgs::parse(Parser& parser)
+{
+	SUFFICIENT_IF parser.match(Token::DELIM_OPEN_PARENTHESIS);
+	try
+	{
+		while(!parser.matchesLookAhead(Token::DELIM_CLOSE_PARENTHESIS))
+		{
+			parser.match<S_FunctionArg>();
+			if(!parser.matchesLookAhead(Token::DELIM_CLOSE_PARENTHESIS))
+				parser.match(Token::DELIM_COMMA);
+		}
+	}
+	catch(const ParseError& err)
+	{
+		parser.report(err);
+		parser.panicUntil(Token::DELIM_CLOSE_PARENTHESIS, false, SCOPE_DETECTOR_PARENTHESES __SCOPE_DIAMONDS __SCOPE_BRACES);
+		PARSER_REPORT(parser.match(Token::DELIM_CLOSE_PARENTHESIS));
+	}
+}
+
+S_FunctionArg::S_FunctionArg()
+: ASTNode("function-arg") {}
+
+void S_FunctionArg::parse(Parser& parser)
+{
+	SUFFICIENT_IF parser.match<S_Identifier>();
+	if(parser.matches(Token::DELIM_COLON))
+		parser.match<S_Type>();
 }

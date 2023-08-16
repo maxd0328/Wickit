@@ -83,6 +83,7 @@ DELIM_COLON: :
 DELIM_DOT: \.
 DELIM_COMMA: ,
 DELIM_HASH: #
+DELIM_BACKSLASH: \\
 
 OPERATOR_ADD: \+
 OPERATOR_SUB: \-
@@ -113,6 +114,9 @@ OPERATOR_ARROW: \->
 OPERATOR_ASSIGN: =
 OPERATOR_OTHER_ASSIGN:
     :?(\+|\-|\*|/|%|&|\||\^|<<|>>)?=
+
+NO_NAME:
+	\-\-\-
 
 NULL_LITERAL:
 	(null)

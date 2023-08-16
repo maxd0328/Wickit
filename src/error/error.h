@@ -138,6 +138,7 @@ namespace wckt::err
 			ErrorSentinel* getPrev() const;
 			behavior_t getBehavior() const;
 			const std::vector<PTR_ErrorContextLayer>& getErrors() const;
+			std::vector<PTR_ErrorContextLayer>& getErrors();
 			errctx_fn_t getContextFunction() const;
 			
 			bool hasErrors() const;

@@ -41,16 +41,21 @@ SH_PossibleFunctionType::SH_PossibleFunctionType()
 
 void SH_PossibleFunctionType::parse(Parser& parser)
 {
-	try { parser.match<S_FunctionTypeParameters>({}, false); }
-	catch(const BacktrackInterrupt&)
+	if(!parser.matchesLookAhead(Token::OPERATOR_LESS))
 	{
-		parser.match<SH_PostfixType>();
-		SUFFICIENT_NOW
-		return;
+		try { parser.match<S_FunctionTypeParameters>({}, true); }
+		catch(const BacktrackInterrupt&)
+		{
+			parser.match<SH_PostfixType>();
+			SUFFICIENT_NOW
+			return;
+		}
 	}
-	
-	if(parser.matchesLookAhead(Token::OPERATOR_LESS))
+	else
+	{
 		parser.match<S_GenericTypeDeclarator>();
+		parser.match<S_FunctionTypeParameters>({}, false);
+	}
 	
 	parser.match<S_FunctionType>();
 	if(!parser.matches(Token::KEYW_VOID))
@@ -87,13 +92,17 @@ void SH_UnitType::parse(Parser& parser)
 {
     if(parser.matches(Token::DELIM_OPEN_PARENTHESIS))
     {
-		try { SUFFICIENT_IF parser.match<SH_TypeDisjunction>({Token::DELIM_CLOSE_PARENTHESIS}); }
+		try
+		{
+			SUFFICIENT_IF parser.match<SH_TypeDisjunction>({Token::DELIM_CLOSE_PARENTHESIS});
+			parser.match(Token::DELIM_CLOSE_PARENTHESIS);
+		}
 		catch(const ParseError& err)
 		{
 			parser.report(err);
 			parser.panicUntil(Token::DELIM_CLOSE_PARENTHESIS, false, SCOPE_DETECTOR_PARENTHESES __SCOPE_DIAMONDS __SCOPE_BRACES);
+			parser.match(Token::DELIM_CLOSE_PARENTHESIS);
 		}
-        parser.match(Token::DELIM_CLOSE_PARENTHESIS);
     }
 	else if(parser.matchesLookAhead(Token::KEYW_CONTRACT))
 	{ SUFFICIENT_IF parser.match<S_ContractType>(); }

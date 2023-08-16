@@ -14,16 +14,19 @@ S_StrictEqualityOperator::S_StrictEqualityOperator(): ASTNode("strict-equality-o
 
 void S_AssignmentOperator::parse(Parser& parser)
 { if(parser.matchesLookAhead(Token::OPERATOR_OTHER_ASSIGN)) parser.match(Token::OPERATOR_OTHER_ASSIGN);
-	else parser.match(Token::OPERATOR_ASSIGN); }
+	else parser.match(Token::OPERATOR_ASSIGN);
+	SUFFICIENT_NOW }
 PARSE_SINGLE_FN(S_TernaryOperator, match, Token::OPERATOR_OPTIONAL)
 void S_LazyLogicalOperator::parse(Parser& parser)
 { if(parser.matchesLookAhead(Token::OPERATOR_LAZY_AND)) parser.match(Token::OPERATOR_LAZY_AND);
   else if(parser.matchesLookAhead(Token::OPERATOR_LAZY_OR)) parser.match(Token::OPERATOR_LAZY_OR);
-  else parser.fallback(); }
+  else parser.fallback();
+  SUFFICIENT_NOW }
 void S_StrictEqualityOperator::parse(Parser& parser)
 { if(parser.matchesLookAhead(Token::OPERATOR_STRICT_EQUALS)) parser.match(Token::OPERATOR_STRICT_EQUALS);
   else if(parser.matchesLookAhead(Token::OPERATOR_STRICT_NOT_EQUALS)) parser.match(Token::OPERATOR_STRICT_NOT_EQUALS);
-  else parser.fallback(); }
+  else parser.fallback();
+  SUFFICIENT_NOW }
 
 S_SatisfiesOperator::S_SatisfiesOperator()
 : ASTNode("satisfies-op") {}
@@ -54,20 +57,9 @@ S_Cast::S_Cast()
 void S_Cast::parse(Parser& parser)
 {
 	SEGMENT_START
-	SUFFICIENT_IF parser.match(Token::OPERATOR_LESS);
-	try
-	{
-		parser.match<S_Type>({Token::OPERATOR_GREATER});
-		parser.match(Token::OPERATOR_GREATER);
-		SEGMENT_END
-	}
-	catch(const ParseError& err)
-	{
-		SEGMENT_END
-		parser.report(err);
-		parser.panicUntil(Token::OPERATOR_GREATER, false, SCOPE_DETECTOR_PARENTHESES __SCOPE_DIAMONDS __SCOPE_BRACES);
-		PARSER_REPORT(parser.match(Token::OPERATOR_GREATER));
-	}
+	parser.match(Token::OPERATOR_XOR);
+	parser.match<S_Type>({}, true);
+	SUFFICIENT_NOW
 }
 
 S_MemberAccess::S_MemberAccess()
@@ -76,7 +68,7 @@ S_MemberAccess::S_MemberAccess()
 void S_MemberAccess::parse(Parser& parser)
 {
 	parser.match(Token::DELIM_DOT);
-	parser.match<S_Identifier>();
+	SUFFICIENT_IF parser.match<S_Identifier>();
 }
 
 S_Subscript::S_Subscript()
@@ -111,6 +103,23 @@ S_Invocation::S_Invocation()
 void S_Invocation::parse(Parser& parser)
 {
 	SEGMENT_START
+	parser.mark();
+	if(parser.matchesLookAhead(Token::OPERATOR_LESS))
+		parser.match<S_GenericTypeSpecifier>({Token::DELIM_OPEN_PARENTHESIS}, true);
+	
+	if(!parser.matchesLookAhead(Token::DELIM_OPEN_PARENTHESIS))
+		parser.backtrack();
+	else parser.unmark();
+	
+	SUFFICIENT_IF parser.match<S_InvocationArgs>();
+	SEGMENT_END
+}
+
+S_InvocationArgs::S_InvocationArgs()
+: ASTNode("invocation-args") {}
+
+void S_InvocationArgs::parse(Parser& parser)
+{
 	SUFFICIENT_IF parser.match(Token::DELIM_OPEN_PARENTHESIS);
 	try
 	{
@@ -120,11 +129,9 @@ void S_Invocation::parse(Parser& parser)
 			if(!parser.matchesLookAhead(Token::DELIM_CLOSE_PARENTHESIS))
 				parser.match(Token::DELIM_COMMA);
 		}
-		SEGMENT_END
 	}
 	catch(const ParseError& err)
 	{
-		SEGMENT_END
 		parser.report(err);
 		parser.panicUntil(Token::DELIM_CLOSE_PARENTHESIS, false, SCOPE_DETECTOR_STD);
 		PARSER_REPORT(parser.match(Token::DELIM_CLOSE_PARENTHESIS));
@@ -162,3 +169,8 @@ S_AbstractOperator::S_AbstractOperator(type_t type)
 : ASTNode("operator"), type(type) {}
 
 PARSE_SINGLE_FN(S_AbstractOperator, match, OPERATOR_MATCHERS[this->type]);
+
+std::string S_AbstractOperator::toString() const
+{
+	return ASTNode::toString() + " " + Token::NICKNAMES.at(OPERATOR_MATCHERS[this->type]);
+}

@@ -6,8 +6,11 @@ namespace wckt::ast
 {
     class S_Type : public build::ASTNode
     {
+		private:
+			bool postfix;
+		
         public:
-            S_Type();
+            S_Type(bool postfix = false);
             bool isOptional() const;
 
             void parse(build::Parser& parser) override;
@@ -51,10 +54,10 @@ namespace wckt::ast
 	class S_FunctionTypeParameters : public build::ASTNode
 	{
 		private:
-			bool switchFunction;
+			bool backtrack;
 		
 		public:
-			S_FunctionTypeParameters(bool switchFunction);
+			S_FunctionTypeParameters(bool backtrack);
 			void parse(build::Parser& parser) override;
 	};
 	
@@ -102,8 +105,11 @@ namespace wckt::ast
 	
 	class S_GenericTypeSpecifier : public build::ASTNode
 	{
+		private:
+			bool backtrack;
+		
 		public:
-			S_GenericTypeSpecifier();
+			S_GenericTypeSpecifier(bool backtrack = false);
 			void parse(build::Parser& parser) override;
 	};
 }

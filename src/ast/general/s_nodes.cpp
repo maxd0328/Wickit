@@ -75,7 +75,7 @@ void S_DeclarationSet::parse(Parser& parser)
 				parser.match<S_TypeDecl>(starters);
 			else
 			{
-				try { parser.match<S_PropertyDecl>(starters, true, true); }
+				try { parser.match<S_PropertyDecl>(starters, S_PropertyDecl::ALLOW_INITIALIZER, true); }
 				catch(const BacktrackInterrupt&) { parser.fallback("declaration"); }
 			}
 		}

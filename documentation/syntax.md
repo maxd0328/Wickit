@@ -108,7 +108,7 @@ TypeConjunction:
     FunctionType { & TypeConjunction }
 
 FunctionType:
-	([TypeList]) [GenericTypeDeclarator] -> (PostfixType|void)
+	[GenericTypeDeclarator] ([TypeList]) -> (PostfixType|void)
 	PostfixType -> (PostfixType|void)
 	PostfixType
 
@@ -128,7 +128,7 @@ SwitchFunctionType:
     switch function { { AbstractSwitchFunctionCase } }
 
 AbstractSwitchFunctionCase:
-    {Modifier} Identifier([TypeList]): (Type|void) ;
+    {Modifier} Identifier [GenericTypeDeclarator] ([TypeList]): (Type|void) ;
 
 GenericTypeDeclarator:
     < GenericType { , GenericType } >
@@ -188,7 +188,7 @@ Expression11:
     Expression12 { (*|/|%) Expression12 }
 
 Expression12:
-    < Type > Expression12
+    ^ PostfixType Expression12
     Expression13
 
 Expression13:
@@ -306,6 +306,7 @@ CatchClause:
 ```
 Identifier:
     IDENTIFIER
+	---
     operator OverloadableOperator
 
 PrimitiveLiteral:
@@ -341,9 +342,9 @@ ValuedVarDecl:
     Identifier [ : Type ] = Expression
 
 OverloadableOperator: (comma separated)
-    +, -, *, /, %, &, |, ^, <<, >>, !, ~, \+,
-    \-, ==, !=, >, <, >=, <=, +=, -=, *=, /=,
-    %=, &=, |=, ^=, <<=, >>=, ++, --, []
+    +, -, *, /, %, &, |, ^, <<, >>, !, ~, \+, \-,
+	==, !=, >, <, >=, <=, +=, -=, *=, /=, %=, &=,
+	|=, ^=, <<=, >>=, ++, --, [], []=, (), ()=
 ```
 
 ## 7. Interpretations

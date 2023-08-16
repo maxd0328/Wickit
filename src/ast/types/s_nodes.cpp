@@ -7,12 +7,13 @@ using namespace wckt;
 using namespace wckt::ast;
 using namespace wckt::build;
 
-S_Type::S_Type()
-: ASTNode("type") {}
+S_Type::S_Type(bool postfix)
+: ASTNode("type"), postfix(postfix) {}
 
 void S_Type::parse(Parser& parser)
 {
-    SUFFICIENT_IF parser.match<SH_TypeDisjunction>();
+    if(postfix) { SUFFICIENT_IF parser.match<SH_PostfixType>(); }
+	else { SUFFICIENT_IF parser.match<SH_TypeDisjunction>(); }
 }
 
 S_TypeUnion::S_TypeUnion(): ASTNode("type-union") {}
@@ -27,8 +28,8 @@ PARSE_SINGLE_FN(S_ArrayPostfix, match, Matcher({Token::DELIM_OPEN_BRACKET, Token
 PARSE_SINGLE_FN(S_OptionalPostfix, match, Token::OPERATOR_OPTIONAL)
 PARSE_SINGLE_FN(S_FunctionType, match, Token::OPERATOR_ARROW)
 
-S_FunctionTypeParameters::S_FunctionTypeParameters(bool switchFunction)
-: ASTNode("function-type-parameters"), switchFunction(switchFunction) {}
+S_FunctionTypeParameters::S_FunctionTypeParameters(bool backtrack)
+: ASTNode("function-type-parameters"), backtrack(backtrack) {}
 
 void S_FunctionTypeParameters::parse(Parser& parser)
 {
@@ -54,7 +55,7 @@ void S_FunctionTypeParameters::parse(Parser& parser)
 	}
 	else { SUFFICIENT_IF parser.match<SH_PostfixType>(); }
 	
-	if(!switchFunction && !certain && !parser.matchesLookAhead(Token::OPERATOR_LESS) && !parser.matchesLookAhead(Token::OPERATOR_ARROW))
+	if(backtrack && !certain && !parser.matchesLookAhead(Token::OPERATOR_ARROW))
 		parser.backtrack();
 	else parser.unmark();
 }
@@ -87,7 +88,7 @@ void S_ContractType::parse(Parser& parser)
 		PARSER_REPORT_RETURN(parser.match(Token::DELIM_OPEN_BRACE));
 	}
 	while(!parser.matchesLookAhead(Token::DELIM_CLOSE_BRACE) && !parser.matchesLookAhead(Token::END_OF_STREAM))
-		parser.match<S_PropertyDecl>({Token::DELIM_CLOSE_BRACE}, false, false);
+		parser.match<S_PropertyDecl>({Token::DELIM_CLOSE_BRACE}, S_PropertyDecl::DISALLOW_INITIALIZER, false);
 	PARSER_REPORT(parser.match(Token::DELIM_CLOSE_BRACE));
 }
 
@@ -130,7 +131,7 @@ void S_AbstractSwitchFunctionCase::parse(Parser& parser)
 	}
 	try
 	{
-		parser.match<S_FunctionTypeParameters>({}, true);
+		parser.match<S_FunctionTypeParameters>({}, false);
 		parser.match(Token::DELIM_COLON);
 		if(!parser.matches(Token::KEYW_VOID))
 			parser.match<S_Type>();
@@ -172,11 +173,13 @@ void S_GenericType::parse(Parser& parser)
 		parser.match<S_Type>();
 }
 
-S_GenericTypeSpecifier::S_GenericTypeSpecifier()
-: ASTNode("generic-type-specifier") {}
+S_GenericTypeSpecifier::S_GenericTypeSpecifier(bool backtrack)
+: ASTNode("generic-type-specifier"), backtrack(backtrack) {}
 
 void S_GenericTypeSpecifier::parse(Parser& parser)
 {
+	if(backtrack)
+		parser.mark();
 	parser.match(Token::OPERATOR_LESS);
 	try
 	{
@@ -186,8 +189,20 @@ void S_GenericTypeSpecifier::parse(Parser& parser)
 	}
 	catch(const ParseError& err)
 	{
-		parser.report(err);
-		parser.panicUntil({Token::OPERATOR_GREATER}, false, SCOPE_DETECTOR_PARENTHESES __SCOPE_DIAMONDS __SCOPE_BRACES);
+		if(backtrack) parser.backtrack();
+		else
+		{
+			parser.report(err);
+			parser.panicUntil({Token::OPERATOR_GREATER}, false, SCOPE_DETECTOR_PARENTHESES __SCOPE_DIAMONDS __SCOPE_BRACES);
+		}
 	}
-	parser.match(Token::OPERATOR_GREATER);
+	
+	if(backtrack)
+	{
+		if(!parser.matchesLookAhead(Token::OPERATOR_GREATER))
+			parser.backtrack();
+		parser.match(Token::OPERATOR_GREATER);
+		parser.unmark();
+	}
+	else parser.match(Token::OPERATOR_GREATER);
 }

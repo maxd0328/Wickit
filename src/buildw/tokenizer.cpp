@@ -5,129 +5,26 @@
 using namespace wckt;
 using namespace wckt::build;
 
-#define __ENUM_TO_STRING_CASE(_Elem, _Null0, _Null1)	case _Elem: return #_Elem;
-#define	__ENUM_TO_REGEX_INIT(_Elem, _Regex, _Null0)		{ _Elem, _Regex },
-#define __ENUM_TO_NICKNAME_INIT(_Elem, _Null0, _Name)	{ _Elem, _Name },
+#define __ENUM_TO_STRING_CASE(_Elem)			case _Elem: return #_Elem;
+#define	__ENUM_TO_REGEX_INIT(_Elem, _Regex)		{ _Elem, _Regex },
+#define __ENUM_TO_NICKNAME_INIT(_Elem, _Name)	{ _Elem, _Name },
 
-#define __GET_CLASS_NAME(...)								\
-		std::string Token::getClassName(class_t _class)		\
-		{													\
-			switch(_class)									\
-			{												\
-				__VA_ARGS__(__ENUM_TO_STRING_CASE)			\
-				default: return "<unknown class>";			\
-			}												\
-		}
+std::string Token::getClassName(class_t _class)
+{
+	switch(_class)
+	{
+		FOREACH_TOKEN_CLASS(__ENUM_TO_STRING_CASE)
+		default: return "<unknown class>";
+	}
+}
 
-#define __REGEXPS(...)													\
-		const std::map<Token::class_t, std::string> Token::REGEXPS = {	\
-			__VA_ARGS__(__ENUM_TO_REGEX_INIT)							\
-		};
+const std::map<Token::class_t, std::string> Token::REGEXPS = {
+	FOREACH_TOKEN_CLASS_REGEXP(__ENUM_TO_REGEX_INIT)
+};
 
-#define __NICKNAMES(...)													\
-		const std::map<Token::class_t, std::string> Token::NICKNAMES = {	\
-			__VA_ARGS__(__ENUM_TO_NICKNAME_INIT)							\
-		};
-
-#define __CLASSES(_Macro)																						\
-		_Macro(KEYW_CONTRACT,				"contract",									"\'contract\'")			\
-		_Macro(KEYW_TEMPLATE,				"template",									"\'template\'")			\
-		_Macro(KEYW_NAMESPACE,				"namespace",								"\'namespace\'")		\
-		_Macro(KEYW_TYPE,					"type",										"\'type\'")				\
-		_Macro(KEYW_AS,						"as",										"\'as\'")				\
-		_Macro(KEYW_EXTENDS,				"extends",									"\'extends\'")			\
-		_Macro(KEYW_FUNCTION,				"function",									"\'function\'")			\
-		_Macro(KEYW_SWITCH,					"switch",									"\'switch\'")			\
-		_Macro(KEYW_CONSTRUCTOR,			"constructor",								"\'constructor\'")		\
-		_Macro(KEYW_IMPORT,					"import",									"\'import\'")			\
-																												\
-		_Macro(KEYW_PUBLIC,					"public",									"\'public\'")			\
-		_Macro(KEYW_RESTRICTED,				"restricted",								"\'restricted\'")		\
-		_Macro(KEYW_PRIVATE,				"private",									"\'private\'")			\
-		_Macro(KEYW_PARTIAL,				"partial",									"\'partial\'")			\
-		_Macro(KEYW_STATIC,					"static",									"\'static\'")			\
-		_Macro(KEYW_DEFAULT,				"default",									"\'default\'")			\
-																												\
-		_Macro(KEYW_VOID,					"void",										"\'void\'")				\
-		_Macro(KEYW_SATISFIES,				"satisfies",								"\'satisfies\'")		\
-		_Macro(KEYW_NEW,					"new",										"\'new\'")				\
-		_Macro(KEYW_THIS,					"this",										"\'this\'")				\
-		_Macro(KEYW_CONFLICT,				"conflict",									"\'conflict\'")			\
-		_Macro(KEYW_OPERATOR,				"operator",									"\'operator\'")			\
-																												\
-		_Macro(KEYW_IF,						"if",										"\'if\'")				\
-		_Macro(KEYW_WHILE,					"while",									"\'while\'")			\
-		_Macro(KEYW_FOR,					"for",										"\'for\'")				\
-		_Macro(KEYW_DO,						"do",										"\'do\'")				\
-		_Macro(KEYW_CASE,					"case",										"\'case\'")				\
-		_Macro(KEYW_BREAK,					"break",									"\'break\'")			\
-		_Macro(KEYW_CONTINUE,				"continue",									"\'continue\'")			\
-		_Macro(KEYW_RETURN,					"return",									"\'return\'")			\
-		_Macro(KEYW_THROW,					"throw",									"\'throw\'")			\
-		_Macro(KEYW_TRY,					"try",										"\'try\'")				\
-		_Macro(KEYW_CATCH,					"catch",									"\'catch\'")			\
-		_Macro(KEYW_FINALLY,				"finally",									"\'finally\'")			\
-		_Macro(KEYW_VAR,					"var",										"\'var\'")				\
-		_Macro(KEYW_DELEGATE,				"delegate",									"\'delegate\'")			\
-																												\
-		_Macro(DELIM_OPEN_PARENTHESIS,		"\\(",										"\'(\'")				\
-		_Macro(DELIM_CLOSE_PARENTHESIS,		"\\)",										"\')\'")				\
-		_Macro(DELIM_OPEN_BRACKET,			"\\[",										"\'[\'")				\
-		_Macro(DELIM_CLOSE_BRACKET,			"\\]",										"\']\'")				\
-		_Macro(DELIM_OPEN_BRACE,			"\\{",										"\'{\'")				\
-		_Macro(DELIM_CLOSE_BRACE,			"\\}",										"\'}\'")				\
-		_Macro(DELIM_SEMICOLON,				";",										"\';\'")				\
-		_Macro(DELIM_COLON,					":",										"\':\'")				\
-		_Macro(DELIM_DOT,					"\\.",										"\'.\'")				\
-		_Macro(DELIM_COMMA,					",",										"\',\'")				\
-		_Macro(DELIM_HASH,					"#",										"\'#\'")				\
-																												\
-		_Macro(OPERATOR_ADD,				"\\+",										"\'+\'")				\
-		_Macro(OPERATOR_SUB,				"\\-",										"\'-\'")				\
-		_Macro(OPERATOR_MUL,				"\\*",										"\'*\'")				\
-		_Macro(OPERATOR_DIV,				"/",										"\'/\'")				\
-		_Macro(OPERATOR_MOD,				"%",										"\'%\'")				\
-		_Macro(OPERATOR_AND,				"&",										"\'&\'")				\
-		_Macro(OPERATOR_OR,					"\\|",										"\'|\'")				\
-		_Macro(OPERATOR_XOR,				"^",										"\'^\'")				\
-		_Macro(OPERATOR_SHL,				"<<",										"\'<<\'")				\
-		_Macro(OPERATOR_SHR,				">>",										"\'>>\'")				\
-		_Macro(OPERATOR_LAZY_AND,			"&&",										"\'&&\'")				\
-		_Macro(OPERATOR_LAZY_OR,			"\\|\\|",									"\'||\'")				\
-		_Macro(OPERATOR_INC,				"\\+\\+",									"\'++\'")				\
-		_Macro(OPERATOR_DEC,				"\\-\\-",									"\'--\'")				\
-		_Macro(OPERATOR_LOGICAL_NOT,		"!",										"\'!\'")				\
-		_Macro(OPERATOR_BITWISE_NOT,		"~",										"\'~\'")				\
-		_Macro(OPERATOR_EQUALS,				"==",										"\'==\'")				\
-		_Macro(OPERATOR_NOT_EQUALS,			"!=",										"\'!=\'")				\
-		_Macro(OPERATOR_STRICT_EQUALS,		"===",										"\'===\'")				\
-		_Macro(OPERATOR_STRICT_NOT_EQUALS,	"!==",										"\'!==\'")				\
-		_Macro(OPERATOR_GREATER,			">",										"\'>\'")				\
-		_Macro(OPERATOR_GREATER_OR_EQUAL,	">=",										"\'>=\'")				\
-		_Macro(OPERATOR_LESS,				"<",										"\'<\'")				\
-		_Macro(OPERATOR_LESS_OR_EQUAL,		"<=",										"\'<=\'")				\
-		_Macro(OPERATOR_OPTIONAL,			"\\?",										"\'?\'")				\
-		_Macro(OPERATOR_ARROW,				"\\->",										"\'->\'")				\
-		_Macro(OPERATOR_ASSIGN,				"=",										"\'=\'")				\
-		_Macro(OPERATOR_OTHER_ASSIGN,		":?(\\+|\\-|\\*|/|%|&|\\||\\^|<<|>>)?=",	"assignment-operator")	\
-																												\
-		_Macro(NULL_LITERAL,				"(null)",									"\'null\'")				\
-		_Macro(BOOL_LITERAL,				"(true|false)",								"bool-literal")			\
-		_Macro(INT_LITERAL,																						\
-			"((0x[0-9A-Fa-f]+)|(0b[01]+)|(0o[0-7]+)|([0-9]+))(L|U|u|s|b|us|ub)?",		"int-literal")			\
-		_Macro(FLOAT_LITERAL,				"(\\d*\\.\\d+|\\d+\\.)[fd]?",				"float-literal")		\
-		_Macro(CHARACTER_LITERAL,			"\'.*\'",									"char-literal")			\
-		_Macro(STRING_LITERAL,				"\".*\"",									"string-literal")		\
-		_Macro(IDENTIFIER,					"[A-Za-z$_][A-Za-z0-9$_]*",					"identifier")			\
-																												\
-		_Macro(COMMENT_SINGLELINE,			"//",										"comment")				\
-		_Macro(COMMENT_MULTILINE,			"/\\*",										"comment")				\
-		_Macro(END_OF_STREAM,				std::string(),								"end-of-stream")		\
-		_Macro(__NULL__,					std::string(),								"<null>")
-
-__GET_CLASS_NAME(__CLASSES)
-__REGEXPS(__CLASSES)
-__NICKNAMES(__CLASSES)
+const std::map<Token::class_t, std::string> Token::NICKNAMES = {
+	FOREACH_TOKEN_CLASS_NICKNAME(__ENUM_TO_NICKNAME_INIT)
+};
 
 Token::Token(class_t _class, const std::string& value, size_t position)
 : SourceSegment(position, value.length()), _class(_class), value(value)

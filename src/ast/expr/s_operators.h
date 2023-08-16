@@ -67,6 +67,13 @@ namespace wckt::ast
 			void parse(build::Parser& parser) override;
 	};
 	
+	class S_InvocationArgs : public build::ASTNode
+	{
+		public:
+			S_InvocationArgs();
+			void parse(build::Parser& parser) override;
+	};
+	
 	class S_AbstractOperator : public build::ASTNode
 	{
 		public:
@@ -104,5 +111,7 @@ namespace wckt::ast
 		public:
 			S_AbstractOperator(type_t type);
 			void parse(build::Parser& parser) override;
+			
+			std::string toString() const override;
 	};
 }

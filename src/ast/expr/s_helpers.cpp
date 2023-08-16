@@ -1,5 +1,6 @@
 #include "ast/expr/s_helpers.h"
 #include "ast/expr/s_operators.h"
+#include "ast/expr/s_values.h"
 
 using namespace wckt;
 using namespace wckt::ast;
@@ -81,7 +82,7 @@ __EXPRESSION_HELPER_IMPL(4)
 __EXPRESSION_HELPER_IMPL(5)
 {
 	parser.match<SH_Expression6>();
-	while(parser.matchesLookAhead(Token::OPERATOR_OR))
+	while(parser.matchesLookAhead(Token::OPERATOR_XOR))
 	{
 		parser.match<S_AbstractOperator>({}, S_AbstractOperator::XOR);
 		parser.match<SH_Expression6>();
@@ -114,6 +115,7 @@ __EXPRESSION_HELPER_IMPL(7)
 		else break;
 		
 		parser.match<SH_Expression8>();
+		parser.reassociateUnder(1);
 	}
 	SUFFICIENT_NOW
 }
@@ -131,6 +133,7 @@ __EXPRESSION_HELPER_IMPL(8)
 		else break;
 		
 		parser.match<SH_Expression9>();
+		parser.reassociateUnder(1);
 	}
 	SUFFICIENT_NOW
 }
@@ -145,6 +148,7 @@ __EXPRESSION_HELPER_IMPL(9)
 		else break;
 		
 		parser.match<SH_Expression10>();
+		parser.reassociateUnder(1);
 	}
 	SUFFICIENT_NOW
 }
@@ -159,6 +163,7 @@ __EXPRESSION_HELPER_IMPL(10)
 		else break;
 		
 		parser.match<SH_Expression11>();
+		parser.reassociateUnder(1);
 	}
 	SUFFICIENT_NOW
 }
@@ -174,13 +179,14 @@ __EXPRESSION_HELPER_IMPL(11)
 		else break;
 		
 		parser.match<SH_Expression12>();
+		parser.reassociateUnder(1);
 	}
 	SUFFICIENT_NOW
 }
 
 __EXPRESSION_HELPER_IMPL(12)
 {
-	if(parser.matchesLookAhead(Token::OPERATOR_LESS))
+	if(parser.matchesLookAhead(Token::OPERATOR_XOR))
 	{
 		parser.match<S_Cast>();
 		parser.match<SH_Expression12>();
@@ -230,7 +236,11 @@ __EXPRESSION_HELPER_IMPL(15)
 	{
 		if(parser.matchesLookAhead(Token::DELIM_DOT)) parser.match<S_MemberAccess>();
 		else if(parser.matchesLookAhead(Token::DELIM_OPEN_BRACKET)) parser.match<S_Subscript>();
-		else if(parser.matchesLookAhead(Token::DELIM_OPEN_PARENTHESIS)) parser.match<S_Invocation>();
+		else if(parser.matchesLookAhead(Token::DELIM_OPEN_PARENTHESIS) || parser.matchesLookAhead(Token::OPERATOR_LESS))
+		{
+			try { parser.match<S_Invocation>(); }
+			catch(const BacktrackInterrupt&) { break; }
+		}
 		else break;
 		
 		parser.reassociateUnder(1);
@@ -240,6 +250,9 @@ __EXPRESSION_HELPER_IMPL(15)
 
 __EXPRESSION_HELPER_IMPL(16)
 {
+	try { parser.match<S_ArrowFunction>(); SUFFICIENT_NOW return; }
+	catch(const BacktrackInterrupt&) {}
+	
 	if(parser.matches(Token::DELIM_OPEN_PARENTHESIS))
 	{
 		try { SUFFICIENT_IF parser.match<SH_Expression0>({Token::DELIM_CLOSE_PARENTHESIS}); }
@@ -250,9 +263,16 @@ __EXPRESSION_HELPER_IMPL(16)
 		}
         parser.match(Token::DELIM_CLOSE_PARENTHESIS);
 	}
-	else if(parser.matchesLookAhead(Token::KEYW_NEW))
-	{
-		// TODO
-	}
-	// TODO
+	else if(parser.matchesLookAhead(Token::IDENTIFIER))			parser.match<S_SymbolReference>();
+	else if(parser.matchesLookAhead(Token::KEYW_THIS))			parser.match<S_This>();
+	else if(parser.matchesLookAhead(Token::KEYW_NEW))			parser.match<S_ObjectConstruction>();
+	else if(parser.matchesLookAhead(Token::DELIM_OPEN_BRACE))	parser.match<S_ObjectLiteral>();
+	else if(parser.matchesLookAhead(Token::DELIM_OPEN_BRACKET))	parser.match<S_ArrayLiteral>();
+	else if(parser.matchesLookAhead(Token::INT_LITERAL))		parser.match<S_IntegerLiteral>();
+	else if(parser.matchesLookAhead(Token::FLOAT_LITERAL))		parser.match<S_FloatLiteral>();
+	else if(parser.matchesLookAhead(Token::BOOL_LITERAL))		parser.match<S_BoolLiteral>();
+	else if(parser.matchesLookAhead(Token::CHARACTER_LITERAL))	parser.match<S_CharLiteral>();
+	else if(parser.matchesLookAhead(Token::STRING_LITERAL))		parser.match<S_StringLiteral>();
+	else if(parser.matchesLookAhead(Token::KEYW_FUNCTION))		parser.match<S_AnonymousFunction>();
+	SUFFICIENT_NOW
 }

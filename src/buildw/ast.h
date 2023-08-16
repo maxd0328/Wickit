@@ -24,7 +24,7 @@ namespace wckt::build
 			std::string getRuleName() const;
 			bool isHelper() const;
 			
-			SourceSegment getSegment() const;
+			virtual SourceSegment getSegment() const;
 			bool isSufficient() const;
 			const std::vector<std::unique_ptr<ASTNode>>& getChildren() const;
 			uint32_t getDegree() const;

@@ -159,6 +159,12 @@ namespace wckt::build
 	class Parser
 	{
 		private:
+			typedef struct
+			{
+				size_t iteratorPos;
+				size_t sentinelPos;
+			} position_t;
+		
 			build_info_t& buildInfo;
 			err::ErrorSentinel sentinel;
 			TokenIterator iterator;
@@ -167,7 +173,7 @@ namespace wckt::build
 			std::unique_ptr<ASTNode> output;
 			
 			std::vector<Matcher> recoveryTokens;
-			std::stack<size_t> positions;
+			std::stack<position_t> positions;
 			
 			bool invsegActive; // Used by ctx-fn
 			SourceSegment invseg;
@@ -224,15 +230,17 @@ namespace wckt::build
 			
 			void mark();
 			void unmark();
-			void backtrack();
+			void backtrack(bool remark = true);
 	};
 	
 	#define _SEG_CTRID					__parser_SegmentCTR__
 	#define SEGMENT_STARTV(_Parser)		const wckt::build::SourceSegment _SEG_CTRID = _Parser.getIterator().lookAhead();
 	#define SEGMENT_ENDV(_Parser)		_Parser.overrideSegment(_SEG_CTRID | _Parser.getIterator().latest());
+	#define SEGMENT_SETV(_Parser)		_Parser.overrideSegment(_Parser.getIterator().lookAhead());
 	
 	#define SEGMENT_START				SEGMENT_STARTV(parser)
 	#define SEGMENT_END					SEGMENT_ENDV(parser)
+	#define SEGMENT_SET					SEGMENT_SETV(parser)
 	
 	#define SUFFICIENT_IFV(_Parser)		_Parser.nextIsSufficient();
 	#define SUFFICIENT_IF				SUFFICIENT_IFV(parser)

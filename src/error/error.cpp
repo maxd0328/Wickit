@@ -114,6 +114,11 @@ const std::vector<PTR_ErrorContextLayer>& ErrorSentinel::getErrors() const
 	return this->errors;
 }
 
+std::vector<PTR_ErrorContextLayer>& ErrorSentinel::getErrors()
+{
+	return this->errors;
+}
+
 ErrorSentinel::errctx_fn_t ErrorSentinel::getContextFunction() const
 {
 	return this->contextFunction;

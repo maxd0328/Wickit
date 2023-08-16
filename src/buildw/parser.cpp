@@ -375,14 +375,14 @@ bool Parser::matchesLatest(const Matcher& matcher)
 			this->positions.pop();													\
 	}
 
-#define __POP_AND_HANDLE_NODE														\
+#define __POP_AND_HANDLE_NODE(__UID)												\
 	node = std::move(this->stack.top());											\
 	if(node->isSufficient())														\
 	{																				\
 		__POP_ALL																	\
 		__SUFFICIENCY_MET															\
 		if(!saveNode)																\
-			return;																	\
+			goto __Exit_ ## __UID;													\
 		if(!this->stack.empty())													\
 		{																			\
 			if(node->isHelper())													\
@@ -394,7 +394,8 @@ bool Parser::matchesLatest(const Matcher& matcher)
 		else																		\
 			this->output = std::move(node);											\
 	}																				\
-	else __POP_ALL
+	else __POP_ALL																	\
+	__Exit_ ## __UID: ;
 
 void Parser::matchInternal(std::unique_ptr<ASTNode> node, std::initializer_list<Matcher> __recoveryTokens, bool saveNode)
 {
@@ -406,22 +407,22 @@ void Parser::matchInternal(std::unique_ptr<ASTNode> node, std::initializer_list<
 	try
 	{
 		this->stack.top()->parse(*this);
-		__POP_AND_HANDLE_NODE
+		__POP_AND_HANDLE_NODE(try)
 	}
 	catch(const ParseError& error)
 	{
-		__POP_AND_HANDLE_NODE
+		__POP_AND_HANDLE_NODE(parseError)
 		throw;
 	}
 	catch(const RecoveryInterrupt& interrupt)
 	{
-		__POP_AND_HANDLE_NODE
+		__POP_AND_HANDLE_NODE(recoveryInterrupt)
 		for(const auto& matcher : __recoveryTokens)
 			if(matcher.matches(interrupt.getView()))
 				return;
 		throw;
 	}
-	catch(...) __POP_ALL
+	catch(...) { __POP_ALL throw; }
 }
 
 void Parser::match(std::unique_ptr<ASTNode> node, std::initializer_list<Matcher> __recoveryTokens)
@@ -450,28 +451,38 @@ bool Parser::panicUntil(const Matcher& matcher, bool silent, ScopeDetector detec
 	return panicUntil({matcher}, "", silent, detector);
 }
 
+#define __CHECK_RECOVERY_MATCHERS																		\
+	for(const auto& recoveryMatcher : this->recoveryTokens)												\
+	{																									\
+		if(recoveryMatcher.matches(this->iterator))														\
+		{																								\
+			if(moved && !silent) this->report((*matchers.begin()).getError(this->iterator, expected));	\
+			throw RecoveryInterrupt(std::make_unique<TokenIterator>(this->iterator));					\
+		}																								\
+	}
+
 bool Parser::panicUntil(std::initializer_list<Matcher> matchers, const std::string& expected, bool silent, ScopeDetector detector)
 {
 	assert(matchers.size() > 0, "Must panic with at least one matcher");
 	bool moved = false;
 	for(;;)
 	{
-		if(detector.processNext(this->iterator))
-			goto end;
-		
 		if(!detector.isInScope())
 		{
 			for(const auto& matcher : matchers)
 				if(matcher.matches(this->iterator))
 					return moved;
+			__CHECK_RECOVERY_MATCHERS
+			
+			if(detector.processNext(this->iterator))
+				goto end;
 		}
-		for(const auto& recoveryMatcher : this->recoveryTokens)
+		else
 		{
-			if(recoveryMatcher.matches(this->iterator))
-			{
-				if(moved && !silent) this->report((*matchers.begin()).getError(this->iterator, expected));
-				throw RecoveryInterrupt(std::make_unique<TokenIterator>(this->iterator));
-			}
+			if(detector.processNext(this->iterator))
+				goto end;
+			
+			__CHECK_RECOVERY_MATCHERS
 		}
 		if(this->iterator.lookAhead().getClass() == Token::END_OF_STREAM) // Just here for redudancy, END_OF_STREAM should always be a recovery token
 			return moved;
@@ -522,7 +533,10 @@ void Parser::report(const ParseError& error)
 
 void Parser::mark()
 {
-	this->positions.push(this->iterator.position);
+	this->positions.push({
+		.iteratorPos = this->iterator.position,
+		.sentinelPos = this->sentinel.getErrors().size()
+	});
 }
 
 void Parser::unmark()
@@ -531,11 +545,15 @@ void Parser::unmark()
 	this->positions.pop();
 }
 
-void Parser::backtrack()
+void Parser::backtrack(bool remark)
 {
-	assert(!this->positions.empty(), "Backtracking position is not marked");
-	this->iterator.position = this->positions.top();
-	this->positions.pop();
+	if(remark)
+	{
+		assert(!this->positions.empty(), "Backtracking position is not marked");
+		this->iterator.position = this->positions.top().iteratorPos;
+		this->sentinel.getErrors().erase(this->sentinel.getErrors().begin() + this->positions.top().sentinelPos, this->sentinel.getErrors().end());
+		this->positions.pop();
+	}
 	throw BacktrackInterrupt();
 }
 
