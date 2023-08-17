@@ -34,6 +34,10 @@ public class Production {
 		return symbols.size();
 	}
 	
+	public boolean isEmpty() {
+		return symbols.isEmpty();
+	}
+	
 	public Symbol getSymbol(int index) {
 		assert index >= 0 && index < symbols.size();
 		return symbols.get(index);
