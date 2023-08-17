@@ -25,7 +25,7 @@ OBJS = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
 TARGET = $(BUILD_DIR)/wickit
 
 # All = build target
-all: $(TARGET)
+all: $(TARGET) lalrgen
 
 # Build target by linking object files
 $(TARGET): $(OBJS)
@@ -36,11 +36,20 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
+# Make LALRGEN sub-project
+lalrgen:
+	$(MAKE) -C lalrgen all
+
+# Run LALRGEN sub-proejct
+run_lalrgen:
+	$(MAKE) -C lalrgen run
+
 # Phony target to clean build artifacts
 .PHONY: clean
 
 # Clean up by deleteing build (and artifact) directory
 clean:
+	$(MAKE) -C lalrgen clean
 	rm -rf $(BUILD_DIR)
 
 # ---------------------------------------------------------------------------
