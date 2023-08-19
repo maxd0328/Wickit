@@ -16,7 +16,7 @@ BINDIR = ../build/lalrgen
 # Specify classpath and sources
 CLASSPATH = $(BINDIR)
 SOURCES = $(SRCDIR)/*.java $(SRCDIR)/io/*.java $(SRCDIR)/lalr/*.java
-CLASSES = $(patsubst $(SRCDIR)/%.java,$(BINDIR)/%.class,$(SOURCES))
+CLASSES = $(BINDIR)/classes.stamp
 
 # ALL = build classes
 all: $(CLASSES)
@@ -28,6 +28,7 @@ $(BINDIR):
 # Build each class from source
 $(CLASSES): $(SOURCES) | $(BINDIR)
 	$(JAVAC) -cp $(CLASSPATH) -d $(BINDIR) $(SOURCES)
+	@touch $(CLASSES)
 
 # Delete build directory
 clean:

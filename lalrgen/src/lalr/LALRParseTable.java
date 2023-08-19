@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.Objects;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 
 public class LALRParseTable {
@@ -42,6 +43,10 @@ public class LALRParseTable {
 		return Collections.unmodifiableMap(rows);
 	}
 	
+	public Collection<Row> getOrderedRows() {
+		return Collections.unmodifiableCollection(rows.values());
+	}
+
 	public int getActionColumnCount() {
 		return actionColumns.length;
 	}
@@ -90,6 +95,10 @@ public class LALRParseTable {
 		this.rows.remove(stateNumber);
 	}
 	
+	public int getRowCount() {
+		return rows.size();
+	}
+
 	public Row getRow(int stateNumber) {
 		assert rows.containsKey(stateNumber);
 		return rows.get(stateNumber);

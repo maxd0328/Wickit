@@ -5,7 +5,6 @@
 #include "base/context.h"
 #include "symbol/locator.h"
 #include "buildw/source.h"
-#include "buildw/ast.h"
 
 namespace wckt::build
 {
@@ -22,7 +21,6 @@ namespace wckt::build
 	{
 		std::shared_ptr<SourceTable> sourceTable;
 		std::shared_ptr<std::vector<Token>> tokenSequence;
-		std::shared_ptr<AST> ast;
 		// ...
 	} build_info_t;
 	

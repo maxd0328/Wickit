@@ -6,6 +6,7 @@ import java.util.Scanner;
 import java.util.Set;
 
 import io.GrammarReader;
+import io.SourceWriter;
 import io.GrammarReader.GrammarFormatException;
 import lalr.Grammar;
 import lalr.LALRParseTable;
@@ -78,22 +79,27 @@ public class Main {
 	}
 	
 	public static void main(String[] args) {
-		String filename = "grammar.txt";
+		String inFilename = "grammar.txt";
+		String outFilename = "src/lalr.cpp";
 		
 		GrammarReader reader = null;
-		try { reader = new GrammarReader(new FileInputStream(new File(filename))); }
-		catch (FileNotFoundException e) { error("File not found: " + filename); }
+		try { reader = new GrammarReader(new FileInputStream(new File(inFilename))); }
+		catch (FileNotFoundException e) { error("File not found: " + inFilename); }
 		
 		Grammar grammar = null;
 		try { grammar = reader.read(); }
 		catch(GrammarFormatException ex) { error("While reading grammar file:\n" + ex.getMessage()); }
-		catch(IOException ex) { error("Failed to read grammar file, please verify file permissions"); }
+		catch(IOException ex) { error("Failed to read file \'" + inFilename + "\', please verify file permissions"); }
 		
 		StateGenerator stateGenerator = new StateGenerator();
 		Set<State> states = stateGenerator.computeStates(grammar);
 		
 		TableGenerator tableGenerator = new TableGenerator(Main::resolveConflicts);
 		LALRParseTable table = tableGenerator.generateParseTable(grammar, states);
+		
+		SourceWriter writer = new SourceWriter(new File(outFilename));
+		try { writer.write(table); }
+		catch(IOException ex) { error("Failed to write source file \'" + outFilename + "\', please verify file permissions"); }
 		
 		info(table.toString());
 	}

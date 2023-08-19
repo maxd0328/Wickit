@@ -103,7 +103,9 @@
 		_MacroO(_MacroI, COMMENT_SINGLELINE,			0xf0,		"//",										"comment")				\
 		_MacroO(_MacroI, COMMENT_MULTILINE,				0xf1,		"/\\*",										"comment")
 
-#define __FUNC_TOKEN_CLASS(_Fn, _Cl)							_Fn(_Cl)
+#define MAX_TOKEN_PLUS_ONE	0xf2
+
+#define __FUNC_TOKEN_CLASS(_Fn, _Cl, _Id, _Rgx, _Nn)			_Fn(_Cl)
 #define __FUNC_TOKEN_CLASS_ID(_Fn, _Cl, _Id, _Rgx, _Nn)			_Fn(_Cl, _Id)
 #define __FUNC_TOKEN_CLASS_REGEXP(_Fn, _Cl, _Id, _Rgx, _Nn)		_Fn(_Cl, _Rgx)
 #define __FUNC_TOKEN_CLASS_NICKNAME(_Fn, _Cl, _Id, _Rgx, _Nn)	_Fn(_Cl, _Nn)
