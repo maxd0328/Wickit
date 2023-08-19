@@ -117,9 +117,9 @@ public class SourceWriter {
             case LALRParseTable.Action.ACCEPT:
                 return 1;
             case LALRParseTable.Action.SHIFT:
-                return 2 * action.getNumber();
+                return 2 * action.getNumber() + 2;
             case LALRParseTable.Action.REDUCE:
-                return 2 * action.getNumber() + 1;
+                return 2 * action.getNumber() + 3;
             default:
                 return 0;
         }

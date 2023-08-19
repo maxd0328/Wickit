@@ -80,7 +80,7 @@ inline action_t getAction(uint32_t stateNumber, const Token& lookAhead)
         default:
             return {
                 .type   = (encodedAction & 0b1) ? REDUCE : SHIFT,
-                .number = encodedAction >> 1
+                .number = (encodedAction >> 1) - 1
             };
     }
 }
