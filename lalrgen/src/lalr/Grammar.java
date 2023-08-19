@@ -1,7 +1,11 @@
+package lalr;
+
 import java.util.Set;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Objects;
+import java.util.Queue;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -96,6 +100,38 @@ public class Grammar {
 		return firstSet;
 	}
 	
+	public Set<Symbol> getReachableSymbols() {
+		Queue<Production> productions = new LinkedList<>();
+		Set<Production> visitedProductions = new HashSet<>();
+		Set<Symbol> symbols = new HashSet<>();
+		symbols.add(new Symbol(Symbol.TERMINAL, "END_OF_STREAM")); // Not in the grammar, but it is always reachable
+		symbols.add(new Symbol(Symbol.NON_TERMINAL, startSymbol));
+		
+		Set<Production> initialProductions = getProductionsOf(startSymbol);
+		productions.addAll(initialProductions);
+		visitedProductions.addAll(initialProductions);
+		
+		while(!productions.isEmpty()) {
+			Production prod = productions.poll();
+			for(Symbol symbol : prod.getSymbols()) {
+				symbols.add(symbol);
+				
+				if(symbol.isTerminal())
+					continue;
+				
+				Set<Production> newProductions = getProductionsOf(symbol.getValue());
+				for(Production newProd : newProductions) {
+					if(!visitedProductions.contains(newProd)) {
+						productions.add(newProd);
+						visitedProductions.add(newProd);
+					}
+				}
+			}
+		}
+		
+		return symbols;
+	}
+	
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder("Grammar [" + startSymbol + "]:");
@@ -103,6 +139,8 @@ public class Grammar {
 			sb.append("\n\t").append(prod.toString());
 		return sb.toString();
 	}
+	
+	
 	
 	@Override
 	public boolean equals(Object o) {

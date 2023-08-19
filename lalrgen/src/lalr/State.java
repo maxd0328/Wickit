@@ -1,3 +1,5 @@
+package lalr;
+
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.Collections;
@@ -15,6 +17,7 @@ public class State {
 	
 	private Map<Symbol, Transition> transitions;
 	private Map<Symbol, Set<Item>> symbolMapCache;
+	private Set<Item> reductionCache;
 	
 	public State(int stateNumber, Set<Item> items) {
 		assert items != null && items.size() > 0;
@@ -24,6 +27,7 @@ public class State {
 		
 		this.transitions = new HashMap<>();
 		this.symbolMapCache = null;
+		this.reductionCache = null;
 	}
 	
 	public int getStateNumber() {
@@ -63,6 +67,7 @@ public class State {
 	public void computeClosure(Grammar grammar) {
 		// Will need to be recomputed after this, make it null to indicate as such
 		symbolMapCache = null;
+		reductionCache = null;
 		
 		// The queue of all items which haven't been processed by the discovery phase yet
 		Queue<Item> unprocessedItems = new LinkedList<>();
@@ -73,8 +78,8 @@ public class State {
 			Item item = unprocessedItems.poll();
 			Symbol nextSymbol = item.nextSymbol();
 			
-			// If an item points to a terminal, it's already closed
-			if(nextSymbol.isTerminal())
+			// If an item points to a terminal or is at the end, it's already closed
+			if(nextSymbol == null || nextSymbol.isTerminal())
 				continue;
 			
 			// Otherwise, find all productions belonging to the non-terminal being pointed to by the item
@@ -96,6 +101,9 @@ public class State {
 		// This is used for efficient lookup during the propagation
 		Map<String, Set<Item>> itemsByNonTerminal = new HashMap<>();
 		for(Item item : items) {
+			if(item.getPosition() > 0) // We only propagate to new items
+				continue;
+			
 			if(itemsByNonTerminal.containsKey(item.getProduction().getNonTerminal()))
 				itemsByNonTerminal.get(item.getProduction().getNonTerminal()).add(item);
 			else {
@@ -112,8 +120,8 @@ public class State {
 			
 			// Iterate through every item in the now closed state
 			for(Item item : items) {
-				// If it points to a terminal, it doesn't propagate anywhere
-				if(item.nextSymbol().isTerminal())
+				// If it points to a terminal or is at the end, it doesn't propagate anywhere
+				if(item.nextSymbol() == null || item.nextSymbol().isTerminal())
 					continue;
 				
 				// Otherwise, determine the non-terminal and calculate look aheads that can come after
@@ -156,9 +164,23 @@ public class State {
 		return Collections.unmodifiableMap(symbolMapCache);
 	}
 	
+	public Set<Item> getReductionItems() {
+		if(reductionCache == null) {
+			reductionCache = new HashSet<>();
+			for(Item item : items)
+				if(item.nextSymbol() == null)
+					reductionCache.add(item);
+		}
+		return Collections.unmodifiableSet(reductionCache);
+	}
+	
+	public String toString(boolean withLookaheads) {
+		return "State " + stateNumber + ":\n\t" + items.stream().map(item -> item.toString(withLookaheads)).collect(Collectors.joining("\n\t"));
+	}
+	
 	@Override
 	public String toString() {
-		return "State " + stateNumber + ":\n\t" + items.stream().map(Item::toString).collect(Collectors.joining("\n\t"));
+		return toString(false);
 	}
 	
 	@Override

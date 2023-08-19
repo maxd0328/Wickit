@@ -1,3 +1,5 @@
+package lalr;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -45,7 +47,7 @@ public class Production {
 	
 	public String toItemString(int position) {
 		StringBuilder sb = new StringBuilder();
-		sb.append(nonTerminal).append(" -> ");
+		sb.append("#" + nonTerminal).append(" -> ");
 		for(int i = 0 ; i < symbols.size() ; ++i)
 			sb.append(i > 0 ? " " : "").append(i == position ? "." : "").append(symbols.get(i).toString());
 		if(position >= symbols.size())
@@ -55,7 +57,7 @@ public class Production {
 	
 	@Override
 	public String toString() {
-		return nonTerminal + " -> " + symbols.stream().map(Symbol::toString).collect(Collectors.joining(" "));
+		return "#" + nonTerminal + " -> " + symbols.stream().map(Symbol::toString).collect(Collectors.joining(" "));
 	}
 	
 	@Override

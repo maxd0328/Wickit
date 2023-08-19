@@ -38,18 +38,14 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 
 # Make LALRGEN sub-project
 lalrgen:
-	$(MAKE) -C lalrgen all
-
-# Run LALRGEN sub-proejct
-run_lalrgen:
-	$(MAKE) -C lalrgen run
+	make -C lalrgen all
 
 # Phony target to clean build artifacts
-.PHONY: clean
+.PHONY: clean lalrgen
 
 # Clean up by deleteing build (and artifact) directory
 clean:
-	$(MAKE) -C lalrgen clean
+	make -C lalrgen clean
 	rm -rf $(BUILD_DIR)
 
 # ---------------------------------------------------------------------------

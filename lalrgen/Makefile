@@ -15,20 +15,19 @@ BINDIR = ../build/lalrgen
 
 # Specify classpath and sources
 CLASSPATH = $(BINDIR)
-SOURCES = $(wildcard $(SRCDIR)/*.java)
-CLASSES = $(SOURCES:$(SRCDIR)/%.java=$(BINDIR)/%.class)
+SOURCES = $(SRCDIR)/*.java $(SRCDIR)/io/*.java $(SRCDIR)/lalr/*.java
+CLASSES = $(patsubst $(SRCDIR)/%.java,$(BINDIR)/%.class,$(SOURCES))
 
 # ALL = build classes
 all: $(CLASSES)
 
-# Build each class from source
-$(CLASSES): $(BINDIR)/%.class : $(SRCDIR)/%.java
+# Create the build directory
+$(BINDIR):
 	@mkdir -p $(BINDIR)
-	$(JAVAC) -cp $(CLASSPATH) -d $(BINDIR) $<
 
-# Run LALR generator
-run: $(CLASSES)
-	$(JAVA) -cp $(CLASSPATH) Main
+# Build each class from source
+$(CLASSES): $(SOURCES) | $(BINDIR)
+	$(JAVAC) -cp $(CLASSPATH) -d $(BINDIR) $(SOURCES)
 
 # Delete build directory
 clean:

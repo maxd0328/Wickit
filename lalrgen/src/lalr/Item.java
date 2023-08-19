@@ -1,5 +1,8 @@
+package lalr;
+
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.Collections;
 import java.util.HashSet;
 
@@ -53,6 +56,8 @@ public class Item {
 	
 	public Set<String> calculateNextLookAheads(Grammar grammar) {
 		Set<String> lookAheads = new HashSet<>();
+		lookAheads.add("");
+		
 		// For every symbol after the one being considered
 		for(int i = position + 1 ; i < production.getSymbolCount() ; ++i) {
 			// Remove empty string because we're considering a new symbol
@@ -77,9 +82,16 @@ public class Item {
 		return lookAheads;
 	}
 	
+	public String toString(boolean withLookaheads) {
+		String str = "Item: " + production.toItemString(position);
+		if(withLookaheads)
+			str += " (Look-aheads: " + lookAheads.stream().collect(Collectors.joining(", ")) + ")";
+		return str;
+	}
+	
 	@Override
 	public String toString() {
-		return "Item: " + production.toItemString(position);
+		return toString(false);
 	}
 	
 	@Override

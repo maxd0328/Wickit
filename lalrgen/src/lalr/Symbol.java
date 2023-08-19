@@ -1,3 +1,5 @@
+package lalr;
+
 import java.util.Objects;
 
 public class Symbol {
@@ -42,7 +44,7 @@ public class Symbol {
 	
 	@Override
 	public boolean equals(Object o) {
-		return o == this ? true : o.getClass() == getClass() ? ((Symbol) o).type == type && ((Symbol) o).value == value : false;
+		return o == this ? true : o.getClass() == getClass() ? ((Symbol) o).type == type && ((Symbol) o).value.equals(value) : false;
 	}
 	
 	@Override

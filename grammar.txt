@@ -1,0 +1,21 @@
+
+START #TranslationUnit;
+
+% General
+
+#TranslationUnit -> #ImportStatement #TranslationUnit;
+#TranslationUnit -> #DeclarationSet;
+
+#ImportStatement -> $KEYW_IMPORT #StaticSymbol #ImportSuffix $DELIM_SEMICOLON;
+#ImportSuffix -> $DELIM_DOT $OPERATOR_MUL;
+#ImportSuffix -> ;
+
+#DeclarationSet -> ;
+
+% Miscellanious
+
+#StaticSymbol -> #StaticSymbol $DELIM_DOT #Identifier;
+#StaticSymbol -> #Identifier;
+
+#Identifier -> $IDENTIFIER;
+#Identifier -> $NO_NAME;

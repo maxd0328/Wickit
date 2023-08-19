@@ -1,0 +1,11 @@
+
+START #expr;
+
+#expr -> #expr $PLUS #term;
+#expr -> #term;
+
+#term -> #term $TIMES #factor;
+#term -> #factor;
+
+#factor -> $LPAREN #expr $RPAREN;
+#factor -> $NUMBER;
