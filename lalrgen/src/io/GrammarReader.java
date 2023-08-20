@@ -20,6 +20,8 @@ public class GrammarReader {
 	
 	private final BufferedReader reader;
 	
+	private Set<String> inclusions;
+	private Set<String> usings;
 	private String startSymbol;
 	private Set<Production> productions;
 	
@@ -32,6 +34,8 @@ public class GrammarReader {
 		assert istream != null;
 		this.reader = new BufferedReader(new InputStreamReader(istream));
 		
+		this.inclusions = new HashSet<>();
+		this.usings = new HashSet<>();
 		this.startSymbol = null;
 		this.productions = new HashSet<>();
 		
@@ -56,10 +60,25 @@ public class GrammarReader {
 				
 				this.startSymbol = nonTerminal.substring(1);
 			}
+			else if(start.equals("INCLUDE")) {
+				String inclusion = nextSymbolNotNull();
+				assertThat(inclusion.startsWith("\""), "expected string after \'INCLUDE\'");
+				assertNextSymbol(";");
+				
+				this.inclusions.add(inclusion.substring(1, inclusion.length() - 1));
+			}
+			else if(start.equals("USING")) {
+				String using = nextSymbolNotNull();
+				assertThat(using.startsWith("\""), "expected string after \'USING\'");
+				assertNextSymbol(";");
+				
+				this.usings.add(using.substring(1, using.length() - 1));
+			}
 			else {
 				assertThat(isNonTerminal(start), "expected non-terminal on left-hand side of production");
 				assertNextSymbol("->");
 				List<Symbol> prodSymbols = new ArrayList<>();
+				String semanticAction = null;
 				
 				for(String prodSymbol = nextSymbolNotNull() ; !prodSymbol.equals(";") ; prodSymbol = nextSymbolNotNull()) {
 					assertThat(isNonTerminal(prodSymbol) || isTerminal(prodSymbol), "expected terminal or non-terminal in production");
@@ -68,14 +87,19 @@ public class GrammarReader {
 					prodSymbols.add(new Symbol(isNonTerminal(prodSymbol) ? Symbol.NON_TERMINAL : Symbol.TERMINAL, prodSymbol.substring(1)));
 				}
 				
-				Production production = new Production(start.substring(1), prodSymbols);
+				if(peekSymbol() != null && peekSymbol().startsWith("{")) {
+					semanticAction = nextSymbolNotNull();
+					semanticAction = semanticAction.substring(1, semanticAction.length() - 1);
+				}
+				
+				Production production = new Production(start.substring(1), prodSymbols, semanticAction);
 				assertThat(!productions.contains(production), "duplicate production for " + start);
 				productions.add(production);
 			}
 		}
 		
 		assertThat(startSymbol != null, "no start symbol declared");
-		return new Grammar(startSymbol, productions);
+		return new Grammar(inclusions, usings, startSymbol, productions);
 	}
 	
 	private boolean whitespace(char ch) {
@@ -87,6 +111,10 @@ public class GrammarReader {
 			|| (ch >= '0' && ch <= '9') || ch == '$' || ch == '_' || ch == '#';
 	}
 	
+	private boolean symbolic(char ch) {
+		return ";->%".indexOf(ch) != -1;
+	}
+	
 	private boolean isNonTerminal(String token) {
 		return token != null && token.length() >= 2 && token.charAt(0) == '#';
 	}
@@ -95,7 +123,7 @@ public class GrammarReader {
 		return token != null && token.length() >= 2 && token.charAt(0) == '$';
 	}
 	
-	private void readNextLine() throws IOException {
+	private void readNextLine() throws IOException, GrammarFormatException {
 		String line = reader.readLine();
 		this.line++;
 		if(line == null) {
@@ -104,41 +132,79 @@ public class GrammarReader {
 		}
 		
 		String curSymbol = null;
+		int numBraces = 0;
 		for(int i = 0 ; i < line.length() ; ++i) {
 			char ch = line.charAt(i);
 			if(curSymbol == null) {
 				if(whitespace(ch)) continue;
-				else curSymbol = String.valueOf(ch);
+				else if(alphanumeric(ch) || symbolic(ch) || ch == '{' || ch == '\"') curSymbol = String.valueOf(ch);
+				else assertThat(false, "Illegal character \'" + ch + "\'");
+			}
+			else if(curSymbol.charAt(0) == '{') {
+				curSymbol += ch;
+				if(ch == '}') {
+					if(numBraces > 0)
+						numBraces--;
+					else {
+						symbols.add(curSymbol);
+						curSymbol = null;
+					}
+					continue;
+				}
+				else if(ch == '{') numBraces++;
+				
+				if(i == line.length() - 1) {
+					String newLine = reader.readLine();
+					assertThat(newLine != null, "unclosed brace");
+					line += newLine;
+					this.line++;
+				}
+			}
+			else if(curSymbol.charAt(0) == '\"') {
+				curSymbol += ch;
+				if(ch == '\"') {
+					symbols.add(curSymbol);
+					curSymbol = null;
+					continue;
+				}
 			}
 			else if((alphanumeric(curSymbol.charAt(0)) && alphanumeric(ch))
-				|| !alphanumeric(curSymbol.charAt(0)) && !alphanumeric(ch) && !whitespace(ch))
+				|| (symbolic(curSymbol.charAt(0)) && symbolic(ch)))
 				curSymbol += ch;
 			else {
 				if(curSymbol.equals("%"))
 					return;
 				symbols.add(curSymbol);
 				curSymbol = null;
-				
-				if(!whitespace(ch))
-					curSymbol = String.valueOf(ch);
+				i--;
 			}
 		}
 		if(curSymbol != null && !curSymbol.equals("%"))
 			symbols.add(curSymbol);
+		
+		if(curSymbol != null && curSymbol.charAt(0) == '\"')
+			assertThat(curSymbol.charAt(curSymbol.length() - 1) == '\"', "unterminated string");
 	}
 	
-	private boolean isDone() throws IOException {
+	private boolean isDone() throws IOException, GrammarFormatException {
 		while(symbols.isEmpty() && !done)
 			readNextLine();
 		
 		return symbols.isEmpty();
 	}
 	
-	private String nextSymbol() throws IOException {
+	private String nextSymbol() throws IOException, GrammarFormatException {
 		if(isDone())
 			return null;
 		
 		return symbols.poll();
+	}
+	
+	private String peekSymbol() throws IOException, GrammarFormatException {
+		if(isDone())
+			return null;
+		
+		return symbols.peek();
 	}
 	
 	private String nextSymbolNotNull() throws GrammarFormatException, IOException {

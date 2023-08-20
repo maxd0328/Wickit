@@ -11,20 +11,34 @@ import java.util.HashMap;
 
 public class Grammar {
 	
+	private final HashSet<String> includeDirectives;
+	private final HashSet<String> usingDirectives;
+	
 	private final String startSymbol;
 	private final HashSet<Production> productions;
 	
 	// Contains the cached FIRST sets for each production
 	private final Map<Production, Set<String>> productionCache;
 	
-	public Grammar(String startSymbol, Set<Production> productions) {
+	public Grammar(Set<String> includeDirectives, Set<String> usingDirectives, String startSymbol, Set<Production> productions) {
 		assert startSymbol != null && productions != null && productions.size() > 0;
+		assert includeDirectives != null && usingDirectives != null;
 		assert productions.stream().filter(prod -> prod.getNonTerminal().equals(startSymbol)).findAny().isPresent();
+		this.includeDirectives = new HashSet<>(includeDirectives);
+		this.usingDirectives = new HashSet<>(usingDirectives);
+		
 		this.startSymbol = startSymbol;
-		this.productions = new HashSet<>();
-		this.productions.addAll(productions);
+		this.productions = new HashSet<>(productions);
 		
 		this.productionCache = new HashMap<>();
+	}
+	
+	public Set<String> getIncludeDirectives() {
+		return Collections.unmodifiableSet(includeDirectives);
+	}
+	
+	public Set<String> getUsingDirectives() {
+		return Collections.unmodifiableSet(usingDirectives);
 	}
 	
 	public String getStartSymbol() {

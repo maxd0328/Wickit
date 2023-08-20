@@ -7,8 +7,11 @@
 
 #include "buildw/tokenizer.h"
 #include "buildw/parser.h"
+#include "symbol/locator.h"
 
+using namespace wckt;
 using namespace wckt::build;
+using namespace wckt::sym;
 
 uint32_t __ACTION_TABLE[MAX_TOKEN_PLUS_ONE][15] = {
 	[Token::DELIM_DOT] = {0, 0, 0, 0, 0, 0, 7, 24, 13, 15, 0, 0, 0, 9, 0},
@@ -29,17 +32,38 @@ uint32_t __GOTO_TABLE[6][15] = {
 	[5] = {4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 };
 
+PSEM_ACTION(__psem0__)
+{  return PMAKE_UNIQUE(TranslationUnit, (__xelems__[0]));  }
+PSEM_ACTION(__psem1__)
+{  return PMAKE_UNIQUE(DummyNode);  }
+PSEM_ACTION(__psem2__)
+{  return PMAKE_UNIQUE(Locator, (__xelems__[0]));  }
+PSEM_ACTION(__psem3__)
+{  return PMAKE_UNIQUE(Locator, (__xelems__[0]) + (__xelems__[2]));  }
+PSEM_ACTION(__psem4__)
+{  (__xelems__[1]).insertImportStatement((__xelems__[0])); return (__xelems__[1]);  }
+PSEM_ACTION(__psem5__)
+{  return PMAKE_UNIQUE(std::string, (__xelems__[0]).getValue());  }
+PSEM_ACTION(__psem6__)
+{  return PMAKE_UNIQUE(std::string, "---");  }
+PSEM_ACTION(__psem7__)
+{  return PMAKE_UNIQUE(ImportStatement, (__xelems__[1]), (__xelems__[2]) != nullptr);  }
+PSEM_ACTION(__psem8__)
+{  return PMAKE_UNIQUE(DeclarationSet);  }
+PSEM_ACTION(__psem9__)
+{  return nullptr;  }
+
 production_t __PROD_TABLE[10] = {
-	[0] = {.nterm = 2, .length = 1},
-	[1] = {.nterm = 0, .length = 2},
-	[2] = {.nterm = 4, .length = 1},
-	[3] = {.nterm = 4, .length = 3},
-	[4] = {.nterm = 2, .length = 2},
-	[5] = {.nterm = 3, .length = 1},
-	[6] = {.nterm = 3, .length = 1},
-	[7] = {.nterm = 1, .length = 4},
-	[8] = {.nterm = 5, .length = 0},
-	[9] = {.nterm = 0, .length = 0},
+	[0] = {.nterm = 2, .length = 1, .action = __psem0__},
+	[1] = {.nterm = 0, .length = 2, .action = __psem1__},
+	[2] = {.nterm = 4, .length = 1, .action = __psem2__},
+	[3] = {.nterm = 4, .length = 3, .action = __psem3__},
+	[4] = {.nterm = 2, .length = 2, .action = __psem4__},
+	[5] = {.nterm = 3, .length = 1, .action = __psem5__},
+	[6] = {.nterm = 3, .length = 1, .action = __psem6__},
+	[7] = {.nterm = 1, .length = 4, .action = __psem7__},
+	[8] = {.nterm = 5, .length = 0, .action = __psem8__},
+	[9] = {.nterm = 0, .length = 0, .action = __psem9__},
 };
 
 /* Parse table interface */

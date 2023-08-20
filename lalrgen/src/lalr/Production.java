@@ -11,17 +11,19 @@ public class Production {
 	
 	private final String nonTerminal;
 	private final List<Symbol> symbols;
+	private final String semanticAction;
 	
 	public Production(String nonTerminal, Symbol... symbols) {
-		this(nonTerminal, Arrays.asList(symbols));
+		this(nonTerminal, Arrays.asList(symbols), null);
 	}
 	
-	public Production(String nonTerminal, List<Symbol> symbols) {
+	public Production(String nonTerminal, List<Symbol> symbols, String semanticAction) {
 		assert nonTerminal != null && symbols != null;
 		assert nonTerminal.length() > 0;
 		this.nonTerminal = nonTerminal;
 		this.symbols = new ArrayList<>();
 		this.symbols.addAll(symbols);
+		this.semanticAction = semanticAction;
 	}
 	
 	public String getNonTerminal() {
@@ -30,6 +32,10 @@ public class Production {
 	
 	public List<Symbol> getSymbols() {
 		return Collections.unmodifiableList(symbols);
+	}
+	
+	public String getSemanticAction() {
+		return semanticAction;
 	}
 	
 	public int getSymbolCount() {

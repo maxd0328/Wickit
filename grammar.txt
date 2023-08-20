@@ -1,21 +1,25 @@
+% Official Wickit Language Grammar
+
+INCLUDE "symbol/locator.h";
+USING "wckt::sym";
 
 START #TranslationUnit;
 
-% General
+% General Rules ----------------------------------------------------------------------------------------------------------------------------------
 
-#TranslationUnit -> #ImportStatement #TranslationUnit;
-#TranslationUnit -> #DeclarationSet;
+#TranslationUnit -> #ImportStatement #TranslationUnit;									{ $1.insertImportStatement($0); return $1; }
+#TranslationUnit -> #DeclarationSet;													{ return $NEW(TranslationUnit, $0); }
 
-#ImportStatement -> $KEYW_IMPORT #StaticSymbol #ImportSuffix $DELIM_SEMICOLON;
-#ImportSuffix -> $DELIM_DOT $OPERATOR_MUL;
-#ImportSuffix -> ;
+#ImportStatement -> $KEYW_IMPORT #StaticSymbol #ImportSuffix $DELIM_SEMICOLON;			{ return $NEW(ImportStatement, $1, $2 != $NULL); }
+#ImportSuffix -> $DELIM_DOT $OPERATOR_MUL;												{ return $NEW(DummyNode); }
+#ImportSuffix -> ;																		{ return $NULL; }
 
-#DeclarationSet -> ;
+#DeclarationSet -> ;																	{ return $NEW(DeclarationSet); }
 
-% Miscellanious
+% Miscellanious Rules ----------------------------------------------------------------------------------------------------------------------------
 
-#StaticSymbol -> #StaticSymbol $DELIM_DOT #Identifier;
-#StaticSymbol -> #Identifier;
+#StaticSymbol -> #StaticSymbol $DELIM_DOT #Identifier;									{ return $NEW(Locator, $0 + $2); }
+#StaticSymbol -> #Identifier;															{ return $NEW(Locator, $0); }
 
-#Identifier -> $IDENTIFIER;
-#Identifier -> $NO_NAME;
+#Identifier -> $IDENTIFIER;																{ return $NEW(std::string, $0.getValue()); }
+#Identifier -> $NO_NAME;																{ return $NEW(std::string, "---"); }

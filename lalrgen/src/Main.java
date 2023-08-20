@@ -98,7 +98,7 @@ public class Main {
 		LALRParseTable table = tableGenerator.generateParseTable(grammar, states);
 		
 		SourceWriter writer = new SourceWriter(new File(outFilename));
-		try { writer.write(table); }
+		try { writer.write(grammar, table); }
 		catch(IOException ex) { error("Failed to write source file \'" + outFilename + "\', please verify file permissions"); }
 		
 		info(table.toString());

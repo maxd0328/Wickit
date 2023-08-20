@@ -1,5 +1,6 @@
 package io;
 
+import lalr.Grammar;
 import lalr.LALRParseTable;
 import lalr.Production;
 
@@ -26,10 +27,7 @@ public class SourceWriter {
         " * ---------------------------------------------------------- */",
         "", 
         "#include \"buildw/tokenizer.h\"",
-        "#include \"buildw/parser.h\"",
-        "",
-        "using namespace wckt::build;",
-        ""
+        "#include \"buildw/parser.h\""
     };
 
     private static final String[] SUFFIX_LINES = {
@@ -47,7 +45,11 @@ public class SourceWriter {
         " * End of auto-generated source file                          *",
         " * ---------------------------------------------------------- */"
     };
-
+	
+	private static final String INCLUSION_LINE = "#include \"%s\"";
+	private static final String USING_LINE = "using namespace %s;";
+	private static final String[] DEFAULT_USINGS = {"wckt", "wckt::build"};
+	
     private static final String ACTION_TABLE_HEADER = "uint32_t __ACTION_TABLE[MAX_TOKEN_PLUS_ONE][%d] = {";
     private static final String GOTO_TABLE_HEADER = "uint32_t __GOTO_TABLE[%d][%d] = {";
     private static final String PROD_TABLE_HEADER = "production_t __PROD_TABLE[%d] = {";
@@ -55,8 +57,12 @@ public class SourceWriter {
 
     private static final String ACTION_TABLE_ENTRY = "\t[Token::%s] = {%s},";
     private static final String GOTO_TABLE_ENTRY = "\t[%d] = {%s},";
-    private static final String PROD_TABLE_ENTRY = "\t[%d] = {.nterm = %d, .length = %d},";
-
+    private static final String PROD_TABLE_ENTRY_NO_ACTION = "\t[%d] = {.nterm = %d, .length = %d, .action = nullptr},";
+	private static final String PROD_TABLE_ENTRY_ACTION = "\t[%d] = {.nterm = %d, .length = %d, .action = __psem%d__},";
+	
+	private static final String PSEM_ACTION_HEADER = "PSEM_ACTION(__psem%d__)";
+	private static final String PSEM_ACTION_BODY = "{ %s }";
+	
     private final File outputFile;
 
     public SourceWriter(File outputFile) {
@@ -68,12 +74,17 @@ public class SourceWriter {
         return outputFile;
     }
 
-    public void write(LALRParseTable table) throws IOException {
+    public void write(Grammar grammar, LALRParseTable table) throws IOException {
         Map<String, Integer> nterms = new HashMap<>();
         IntStream.range(0, table.getGotoColumnCount()).forEach(i -> nterms.put(table.getGotoColumn(i), i));
 
         List<String> lines = new ArrayList<>();
         lines.addAll(Arrays.asList(PREFIX_LINES));
+		lines.addAll(grammar.getIncludeDirectives().stream().map(incl -> String.format(INCLUSION_LINE, incl)).toList());
+		lines.add("");
+		lines.addAll(Arrays.stream(DEFAULT_USINGS).map(use -> String.format(USING_LINE, use)).toList());
+		lines.addAll(grammar.getUsingDirectives().stream().map(use -> String.format(USING_LINE, use)).toList());
+		lines.add("");
 
         lines.add(String.format(ACTION_TABLE_HEADER, table.getRowCount()));
         for(int i = 0 ; i < table.getActionColumnCount() ; ++i) {
@@ -92,11 +103,25 @@ public class SourceWriter {
         }
         lines.add(TABLE_FOOTER);
         lines.add("");
+		
+		boolean addedAction = false;
+		for(int i = 0 ; i < table.getProductionCount() ; ++i) {
+			Production prod = table.getProduction(i);
+			if(prod.getSemanticAction() == null)
+				continue;
+			addedAction = true;
+			lines.add(String.format(PSEM_ACTION_HEADER, i));
+			lines.add(String.format(PSEM_ACTION_BODY, expandSemanticAction(prod.getSemanticAction())));
+		}
+		if(addedAction) lines.add("");
 
         lines.add(String.format(PROD_TABLE_HEADER, table.getProductionCount()));
         for(int i = 0 ; i < table.getProductionCount() ; ++i) {
             Production prod = table.getProduction(i);
-            lines.add(String.format(PROD_TABLE_ENTRY, i, nterms.get(prod.getNonTerminal()), prod.getSymbolCount()));
+			if(prod.getSemanticAction() == null)
+            	lines.add(String.format(PROD_TABLE_ENTRY_NO_ACTION, i, nterms.get(prod.getNonTerminal()), prod.getSymbolCount()));
+			else
+				lines.add(String.format(PROD_TABLE_ENTRY_ACTION, i, nterms.get(prod.getNonTerminal()), prod.getSymbolCount(), i));
         }
         lines.add(TABLE_FOOTER);
 
@@ -124,5 +149,12 @@ public class SourceWriter {
                 return 0;
         }
     }
+	
+	private String expandSemanticAction(String semanticAction) {
+		semanticAction = semanticAction.replaceAll("\\$([0-9]+)", "(__xelems__[$1])");
+		semanticAction = semanticAction.replaceAll("\\$NULL", "nullptr");
+		semanticAction = semanticAction.replaceAll("\\$NEW", "PMAKE_UNIQUE");
+		return semanticAction;
+	}
 
 }

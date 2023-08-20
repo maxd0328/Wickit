@@ -8,6 +8,7 @@
 #define __CLASSES(_MacroO, _MacroI)																										\
 		_MacroO(_MacroI, END_OF_STREAM,					0x00,		std::string(),								"end-of-stream")		\
 		_MacroO(_MacroI, __NULL__,						0x01,		std::string(),								"<null>")				\
+		_MacroO(_MacroI, ERROR,							0x02,		std::string(),								"<error>")				\
 		_MacroO(_MacroI, KEYW_CONTRACT,					0x02,		"contract",									"\'contract\'")			\
 		_MacroO(_MacroI, KEYW_TEMPLATE,					0x03,		"template",									"\'template\'")			\
 		_MacroO(_MacroI, KEYW_NAMESPACE,				0x04,		"namespace",								"\'namespace\'")		\
@@ -121,7 +122,9 @@
 
 namespace wckt::build
 {
-	class Token : public SourceSegment
+	class ParseObject;
+	
+	class Token : public SourceSegment, public ParseObject
 	{
 		public:
 			enum class_t
