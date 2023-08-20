@@ -15,14 +15,26 @@ public class TableGenerator {
 	private static java.util.function.IntFunction<Production[]>	P_ARR_GEN = e -> new Production[e];
 	
 	private final ConflictResolver conflictResolver;
+	private final ConflictInformer conflictInformer;
+	private final boolean autoResolutionEnabled;
 	
-	public TableGenerator(ConflictResolver conflictResolver) {
+	public TableGenerator(ConflictResolver conflictResolver, ConflictInformer conflictInformer, boolean autoResolutionEnabled) {
 		assert conflictResolver != null;
 		this.conflictResolver = conflictResolver;
+		this.conflictInformer = conflictInformer;
+		this.autoResolutionEnabled = autoResolutionEnabled;
 	}
 	
 	public ConflictResolver getConflictResolver() {
 		return conflictResolver;
+	}
+	
+	public ConflictInformer getConflictInformer() {
+		return conflictInformer;
+	}
+	
+	public boolean isAutoResolutionEnabled() {
+		return autoResolutionEnabled;
 	}
 	
 	public LALRParseTable generateParseTable(Grammar grammar, Set<State> states) {
@@ -99,11 +111,7 @@ public class TableGenerator {
 				// If it has more than one action we use the conflict resolution agent to choose one that we insert
 				if(actionSet.isEmpty())
 					continue;
-				if(actionSet.size() > 1) {
-					chosenAction = conflictResolver.resolve(new ConflictInformation
-						(state.getStateNumber(), terminal, actionSet, stateMap, allProductions));
-					assert chosenAction != null && actionSet.contains(chosenAction);
-				}
+				if(actionSet.size() > 1) chosenAction = resolveConflict(productionQty, terminal, actionSet, stateMap, allProductions);
 				else chosenAction = actionSet.stream().findFirst().orElse(null);
 				
 				actions[terminalMap.get(terminal)] = chosenAction;
@@ -125,9 +133,57 @@ public class TableGenerator {
 		return set;
 	}
 	
+	private LALRParseTable.Action resolveConflict(int stateNumber, String terminal,
+			Set<LALRParseTable.Action> actionSet, Map<Integer, State> stateMap, List<Production> allProductions) {
+		if(!autoResolutionEnabled) {
+			LALRParseTable.Action chosenAction = conflictResolver.resolve(new ConflictInformation(stateNumber, terminal,
+					actionSet, null, stateMap, allProductions, Production.Precedence.SHIFT_PRECEDENCE, true));
+			assert chosenAction != null && actionSet.contains(chosenAction);
+			return chosenAction;
+		}
+		
+		Set<LALRParseTable.Action> ambiguousSet = new TreeSet<>();
+		Production.Precedence highestPrecedence = new Production.Precedence(Production.Precedence.LOW, Integer.MAX_VALUE);
+		
+		for(LALRParseTable.Action action : actionSet) {
+			Production.Precedence precedence = (action.getType() == LALRParseTable.Action.REDUCE)
+				? allProductions.get(action.getNumber()).getPrecedence() : Production.Precedence.SHIFT_PRECEDENCE;
+			
+			if(precedence.compareTo(highestPrecedence) > 0) {
+				highestPrecedence = precedence;
+				ambiguousSet.clear();
+				ambiguousSet.add(action);
+			}
+			else if(precedence.compareTo(highestPrecedence) == 0)
+				ambiguousSet.add(action);
+		}
+		
+		assert !ambiguousSet.isEmpty();
+		
+		if(ambiguousSet.size() == 1) {
+			LALRParseTable.Action chosenAction = new ArrayList<>(ambiguousSet).get(0);
+			if(conflictInformer != null)
+				conflictInformer.inform(new ConflictInformation(stateNumber, terminal,
+						actionSet, chosenAction, stateMap, allProductions, highestPrecedence, false));
+			return chosenAction;
+		}
+		else {
+			LALRParseTable.Action chosenAction = conflictResolver.resolve(new ConflictInformation(stateNumber, terminal,
+					ambiguousSet, null, stateMap, allProductions, highestPrecedence, false));
+			assert chosenAction != null && actionSet.contains(chosenAction);
+			return chosenAction;
+		}
+	}
+	
 	public static interface ConflictResolver {
 		
 		public LALRParseTable.Action resolve(ConflictInformation info);
+		
+	}
+	
+	public static interface ConflictInformer {
+		
+		public void inform(ConflictInformation info);
 		
 	}
 	
@@ -136,22 +192,32 @@ public class TableGenerator {
 		private final int stateNumber;
 		private final String lookAhead;
 		private final Set<LALRParseTable.Action> conflictingActions;
+		private final LALRParseTable.Action chosenAction;
 		private final Map<Integer, State> stateMap;
 		private final List<Production> productionList;
+		private final boolean precedenceDisabled;
+		private final Production.Precedence precedence;
 		
-		public ConflictInformation(int stateNumber, String lookAhead, Set<LALRParseTable.Action> conflictingActions,
-				Map<Integer, State> stateMap, List<Production> productionList) {
-			assert lookAhead != null && conflictingActions != null && stateMap != null && productionList != null;
+		public ConflictInformation(int stateNumber, String lookAhead, Set<LALRParseTable.Action> conflictingActions, LALRParseTable.Action chosenAction,
+				Map<Integer, State> stateMap, List<Production> productionList, Production.Precedence precedence, boolean precedenceDisabled) {
+			assert lookAhead != null && conflictingActions != null && stateMap != null && productionList != null && precedence != null;
 			assert conflictingActions.size() > 1;
 			this.stateNumber = stateNumber;
 			this.lookAhead = lookAhead;
 			this.conflictingActions = conflictingActions;
+			this.chosenAction = chosenAction;
 			this.stateMap = stateMap;
 			this.productionList = productionList;
+			this.precedence = precedence;
+			this.precedenceDisabled = precedenceDisabled;
 		}
 		
 		public Set<LALRParseTable.Action> getConfictingActions() {
 			return Collections.unmodifiableSet(conflictingActions);
+		}
+		
+		public LALRParseTable.Action getChosenAction() {
+			return chosenAction;
 		}
 		
 		public int getStateNumber() {
@@ -172,6 +238,14 @@ public class TableGenerator {
 		
 		public Production getProduction(int productionNumber) {
 			return productionList.get(productionNumber);
+		}
+		
+		public Production.Precedence getPrecedence() {
+			return precedence;
+		}
+		
+		public boolean isPrecedenceDisabled() {
+			return precedenceDisabled;
 		}
 		
 		public String getConflictType() {

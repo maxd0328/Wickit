@@ -16,7 +16,8 @@ import lalr.TableGenerator;
 
 public class Main {
 	
-	private static Scanner SCANNER = new Scanner(System.in);
+	private static final Scanner SCANNER = new Scanner(System.in);
+	private static boolean verbose = false;
 	
 	private static void info(String str) {
 		System.out.println(str);
@@ -32,13 +33,11 @@ public class Main {
 		return SCANNER.nextLine().trim();
 	}
 	
-	private static LALRParseTable.Action resolveConflicts(TableGenerator.ConflictInformation info) {
-		info(info.getConflictType() + " conflict detected!");
-		info(info.getConfictingActions().size() + " action(s) for lookahead \'" + info.getLookAhead() + "\'");
-		info("Currently in state " + info.getStateNumber());
-		info("See conflict details below:");
-		info("");
-		
+	private static String getReductionString(LALRParseTable.Action action, TableGenerator.ConflictInformation info) {
+		return action.getType() == LALRParseTable.Action.REDUCE ? " [" + info.getProduction(action.getNumber()).toString() + "]" : "";
+	}
+	
+	private static LALRParseTable.Action[] printVerboseDetails(TableGenerator.ConflictInformation info) {
 		info("[Current State] " + info.getState().toString());
 		info("");
 		
@@ -54,6 +53,20 @@ public class Main {
 			info("");
 			actions[index++] = action;
 		}
+		return actions;
+	}
+	
+	private static LALRParseTable.Action resolveConflicts(TableGenerator.ConflictInformation info) {
+		info(info.getConflictType() + " conflict detected!");
+		info(info.getConfictingActions().size() + " ambiguous actions for lookahead \'" + info.getLookAhead() + "\'");
+		if(info.isPrecedenceDisabled())
+			info("NOTE: Auto-conflict resolution is disabled, so precedence is not considered");
+		else info("All actions have precedence \'" + info.getPrecedence() + "\', consider writing explicit precedences");
+		info("Currently in state " + info.getStateNumber());
+		info("See conflict details below:");
+		info("");
+		
+		LALRParseTable.Action[] actions = printVerboseDetails(info);
 		
 		info("Action Summary:");
 		for(int i = 0 ; i < actions.length ; ++i) {
@@ -78,9 +91,31 @@ public class Main {
 		return actions[Integer.parseInt(input)];
 	}
 	
+	private static void informConflicts(TableGenerator.ConflictInformation info) {
+		info("INFO: Auto-conflict resolution has chosen the following action for state " + info.getStateNumber() + " and look-ahead " + info.getLookAhead()
+			+ ": " + info.getChosenAction().getDetailString() + " (" + info.getChosenAction().toString() + ")" + getReductionString(info.getChosenAction(), info));
+		if(!verbose) {
+			boolean first = true;
+			for(LALRParseTable.Action action : info.getConfictingActions()) {
+				if(action.equals(info.getChosenAction()))
+					continue;
+				info("   " + (first ? "Instead of " : "Or ") + action.getDetailString() + " (" + action.toString() + ")" + getReductionString(action, info));
+				first = false;
+			}
+		}
+		else {
+			info("[VERBOSE] See conflict details below:");
+			info("");
+			printVerboseDetails(info);
+			info("---");
+		}
+	}
+	
 	public static void main(String[] args) {
-		String inFilename = "grammar.txt";
+		String inFilename = "testgrammar.txt";
 		String outFilename = "src/lalr.cpp";
+		boolean autoConflictResolutionDisabled = false;
+		verbose = false;
 		
 		GrammarReader reader = null;
 		try { reader = new GrammarReader(new FileInputStream(new File(inFilename))); }
@@ -94,14 +129,12 @@ public class Main {
 		StateGenerator stateGenerator = new StateGenerator();
 		Set<State> states = stateGenerator.computeStates(grammar);
 		
-		TableGenerator tableGenerator = new TableGenerator(Main::resolveConflicts);
+		TableGenerator tableGenerator = new TableGenerator(Main::resolveConflicts, Main::informConflicts, !autoConflictResolutionDisabled);
 		LALRParseTable table = tableGenerator.generateParseTable(grammar, states);
 		
 		SourceWriter writer = new SourceWriter(new File(outFilename));
 		try { writer.write(grammar, table); }
 		catch(IOException ex) { error("Failed to write source file \'" + outFilename + "\', please verify file permissions"); }
-		
-		info(table.toString());
 	}
 	
 }

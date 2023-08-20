@@ -45,6 +45,8 @@ namespace wckt::build
         private:
             std::shared_ptr<std::vector<Token>> tokenSequence;
             size_t position;
+			
+			Token insertedToken;
 
         public:
             TokenIterator(std::shared_ptr<std::vector<Token>> tokenSequence, size_t position = 0);
@@ -56,6 +58,8 @@ namespace wckt::build
             Token next();
             Token lookAhead() const;
             Token latest() const;
+			
+			void insert(const Token& token);
     };
 
     namespace services

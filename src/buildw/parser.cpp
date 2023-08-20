@@ -24,8 +24,10 @@ std::unique_ptr<ParseObject>&& ParseOutput::releaseObject()
 	return std::move(this->object);
 }
 
+#define _NULL_TOKEN Token(Token::__NULL__, " ", 0)
+
 TokenIterator::TokenIterator(std::shared_ptr<std::vector<Token>> tokenSequence, size_t position)
-: tokenSequence(tokenSequence), position(position)
+: tokenSequence(tokenSequence), position(position), insertedToken(_NULL_TOKEN)
 {}
 
 std::shared_ptr<std::vector<Token>> TokenIterator::getTokenSequence() const
@@ -43,6 +45,13 @@ size_t TokenIterator::getPosition() const
 
 Token TokenIterator::next()
 {
+	if(this->insertedToken.getClass() != Token::__NULL__)
+	{
+		Token tok = this->insertedToken;
+		this->insertedToken = _NULL_TOKEN;
+		return tok;
+	}
+	
     if(this->position >= this->tokenSequence->size())
         return Token(Token::END_OF_STREAM, " ", __END_OF_STREAM_POS);
     else return this->tokenSequence->at(this->position++);
@@ -50,6 +59,9 @@ Token TokenIterator::next()
 
 Token TokenIterator::lookAhead() const
 {
+	if(this->insertedToken.getClass() != Token::__NULL__)
+		return this->insertedToken;
+	
     if(this->position >= this->tokenSequence->size())
         return Token(Token::END_OF_STREAM, " ", __END_OF_STREAM_POS);
     else return this->tokenSequence->at(this->position);
@@ -60,6 +72,11 @@ Token TokenIterator::latest() const
     if(this->position == 0 || this->tokenSequence->empty())
         return Token(Token::__NULL__, " ", 0);
     else return this->tokenSequence->at(std::min(this->tokenSequence->size(), this->position) - 1);
+}
+
+void TokenIterator::insert(const Token& token)
+{
+	this->insertedToken = token;
 }
 
 enum action_type_t
@@ -87,9 +104,9 @@ extern uint32_t lalraction(uint32_t __row, uint32_t __col);
 extern uint32_t lalrgoto(uint32_t __row, uint32_t __col);
 extern production_t lalrprod(uint32_t __row);
 
-inline action_t getAction(uint32_t stateNumber, const Token& lookAhead)
+inline action_t getAction(uint32_t stateNumber, Token::class_t tokenClass)
 {
-    uint32_t encodedAction = lalraction(stateNumber, (uint32_t) lookAhead.getClass());
+    uint32_t encodedAction = lalraction(stateNumber, (uint32_t) tokenClass);
     switch(encodedAction)
     {
         case 0:
@@ -110,62 +127,101 @@ inline action_t getAction(uint32_t stateNumber, const Token& lookAhead)
     }
 }
 
+inline action_t getAction(uint32_t stateNumber, const Token& lookAhead)
+{ return getAction(stateNumber, lookAhead.getClass()); }
+
 void services::parse(build_info_t& buildInfo, err::ErrorSentinel* parentSentinel)
 {
+	// Assertions to ensure valid build state before parsing
     assert(buildInfo.sourceTable != nullptr, "Build info must contain source table before parsing");
     assert(buildInfo.tokenSequence != nullptr, "Build info must contain token sequence before parsing");
-
+	
+	// Create stack of states and push initial state
     std::stack<state_t> stack;
     stack.push({.number = 0, .object = nullptr});
-
+	
+	// Create token iterator and look-ahead object
     TokenIterator iterator(buildInfo.tokenSequence);
     Token lookAhead(Token::__NULL__, " ", 0);
-
+	
+	// Create error sentinel to handle parsing errors with proper tracebacks
     err::ErrorSentinel sentinel(parentSentinel, err::ErrorSentinel::COLLECT, [&buildInfo, &lookAhead](err::PTR_ErrorContextLayer ptr) {
         return _MAKE_ERR(IntrasourceContextLayer, std::move(ptr), lookAhead, buildInfo.sourceTable);
     });
 
+	// LALR parsing iteration
     for(;;)
     {
+		// Get the top state and next look-ahead token
         state_t& state = stack.top();
         lookAhead = iterator.lookAhead();
 		
+		// Get the action from the parse table for this state and look-ahead
         action_t action = getAction(state.number, lookAhead);
 		
         switch(action.type)
         {
             case SHIFT: {
+				// For shift actions, simply shift to the next state and consume the look-ahead
 				stack.push({.number = action.number, .object = PMAKE_UNIQUE(Token, lookAhead)});
-                goto proceed;
+				iterator.next();
+				
+				// If we are shifting the ERROR token, we panic until either END_OF_STREAM or a matchable look-ahead
+				if(lookAhead.getClass() == Token::ERROR)
+				{
+					Token errorLookAhead = iterator.lookAhead();
+					while(getAction(action.number, errorLookAhead).type == ERROR && errorLookAhead.getClass() != Token::END_OF_STREAM)
+						iterator.next();
+				}
+                continue;
 			}
             case REDUCE: {
+				// For reduction actions, we fetch the production to reduce by
 				production_t production = lalrprod(action.number);
 				std::vector<std::unique_ptr<ParseObject>> xelems;
 				
+				// For every symbol in the production, we pop a state from the stack and store its object, if any
                 for(uint32_t i = 0 ; i < production.length ; ++i)
 				{
 					xelems.insert(xelems.begin(), std::move(stack.top().object));
 					stack.pop();
 				}
 				
+				// If the production has a semantic action, call it to generate an object using popped state objects
 				auto object = production.action != nullptr ? production.action(std::move(xelems)) : nullptr;
+				// Use the goto entry of the new top state to move to the new state after the reduction, copying the new object, if any
                 stack.push({.number = lalrgoto(stack.top().number, production.nterm), .object = std::move(object)});
-                goto proceed;
+            	continue;
 			}
             case ACCEPT: {
+				// For accept actions, we are done!
 				goto finish;
 			}
             case ERROR: {
+				// For error actions (i.e. no such entry in the parse table), first raise a syntax error with a helpful message
 				sentinel.raise(_MAKE_STD_ERR("Unexpected token \'" + lookAhead.getValue() + "\'"));
-                goto finish;
+				
+				// Continually pop states off the stack until ERROR is a valid look-ahead token
+				action = getAction(state.number, Token::ERROR);
+				while(action.type != ERROR && stack.size() > 1)
+				{
+					stack.pop();
+					action = getAction(stack.top().number, Token::ERROR);
+				}
+				
+				// If there is no such state that accepts the ERROR token, we abort parsing (this shouldn't happen)
+				// Otherwise, we insert the ERROR token and continue parsing from this state
+				if(action.type == ERROR)
+				{
+					sentinel.raise(_MAKE_STD_ERR("No error recovery rule available; parsing terminated"));
+					goto finish;
+				}
+				else iterator.insert(Token(Token::ERROR, " ", lookAhead.getPosition()));
 			}
         }
-		
-        proceed:
-        iterator.next();
     }
 	
     finish:
 	auto object = std::move(stack.top().object);
-	// ...
+	// TODO convert into a usable form and return...
 }

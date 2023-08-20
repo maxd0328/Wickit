@@ -7,63 +7,33 @@
 
 #include "buildw/tokenizer.h"
 #include "buildw/parser.h"
-#include "symbol/locator.h"
 
 using namespace wckt;
 using namespace wckt::build;
-using namespace wckt::sym;
 
-uint32_t __ACTION_TABLE[MAX_TOKEN_PLUS_ONE][15] = {
-	[Token::DELIM_DOT] = {0, 0, 0, 0, 0, 0, 7, 24, 13, 15, 0, 0, 0, 9, 0},
-	[Token::KEYW_IMPORT] = {8, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 17, 0, 0},
-	[Token::DELIM_SEMICOLON] = {0, 0, 0, 0, 0, 0, 7, 21, 13, 15, 26, 0, 0, 9, 5},
-	[Token::IDENTIFIER] = {0, 0, 0, 18, 0, 0, 0, 0, 0, 0, 0, 18, 0, 0, 0},
-	[Token::NO_NAME] = {0, 0, 0, 20, 0, 0, 0, 0, 0, 0, 0, 20, 0, 0, 0},
-	[Token::END_OF_STREAM] = {19, 19, 1, 0, 3, 11, 0, 0, 0, 0, 0, 0, 17, 0, 0},
-	[Token::OPERATOR_MUL] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 30, 0, 0, 0},
+uint32_t __ACTION_TABLE[MAX_TOKEN_PLUS_ONE][13] = {
+	[Token::NUMBER] = {4, 0, 0, 4, 0, 0, 0, 0, 4, 4, 0, 0, 0},
+	[Token::TIMES] = {0, 15, 7, 0, 0, 20, 13, 0, 0, 0, 5, 20, 3},
+	[Token::LPAREN] = {8, 0, 0, 8, 0, 0, 0, 0, 8, 8, 0, 0, 0},
+	[Token::RPAREN] = {0, 0, 0, 0, 0, 0, 0, 22, 0, 0, 0, 0, 0},
+	[Token::END_OF_STREAM] = {0, 15, 7, 0, 1, 11, 13, 0, 0, 0, 5, 9, 3},
+	[Token::PLUS] = {0, 15, 7, 0, 18, 11, 13, 18, 0, 0, 5, 9, 3},
 };
 
-uint32_t __GOTO_TABLE[6][15] = {
-	[0] = {0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0},
-	[1] = {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[2] = {2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[3] = {0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0},
-	[4] = {0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	[5] = {4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+uint32_t __GOTO_TABLE[3][13] = {
+	[0] = {2, 0, 0, 2, 0, 0, 0, 0, 2, 12, 0, 0, 0},
+	[1] = {4, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+	[2] = {5, 0, 0, 5, 0, 0, 0, 0, 11, 0, 0, 0, 0},
 };
 
-PSEM_ACTION(__psem0__)
-{  return PMAKE_UNIQUE(TranslationUnit, (__xelems__[0]));  }
-PSEM_ACTION(__psem1__)
-{  return PMAKE_UNIQUE(DummyNode);  }
-PSEM_ACTION(__psem2__)
-{  return PMAKE_UNIQUE(Locator, (__xelems__[0]));  }
-PSEM_ACTION(__psem3__)
-{  return PMAKE_UNIQUE(Locator, (__xelems__[0]) + (__xelems__[2]));  }
-PSEM_ACTION(__psem4__)
-{  (__xelems__[1]).insertImportStatement((__xelems__[0])); return (__xelems__[1]);  }
-PSEM_ACTION(__psem5__)
-{  return PMAKE_UNIQUE(std::string, (__xelems__[0]).getValue());  }
-PSEM_ACTION(__psem6__)
-{  return PMAKE_UNIQUE(std::string, "---");  }
-PSEM_ACTION(__psem7__)
-{  return PMAKE_UNIQUE(ImportStatement, (__xelems__[1]), (__xelems__[2]) != nullptr);  }
-PSEM_ACTION(__psem8__)
-{  return PMAKE_UNIQUE(DeclarationSet);  }
-PSEM_ACTION(__psem9__)
-{  return nullptr;  }
-
-production_t __PROD_TABLE[10] = {
-	[0] = {.nterm = 2, .length = 1, .action = __psem0__},
-	[1] = {.nterm = 0, .length = 2, .action = __psem1__},
-	[2] = {.nterm = 4, .length = 1, .action = __psem2__},
-	[3] = {.nterm = 4, .length = 3, .action = __psem3__},
-	[4] = {.nterm = 2, .length = 2, .action = __psem4__},
-	[5] = {.nterm = 3, .length = 1, .action = __psem5__},
-	[6] = {.nterm = 3, .length = 1, .action = __psem6__},
-	[7] = {.nterm = 1, .length = 4, .action = __psem7__},
-	[8] = {.nterm = 5, .length = 0, .action = __psem8__},
-	[9] = {.nterm = 0, .length = 0, .action = __psem9__},
+production_t __PROD_TABLE[7] = {
+	[0] = {.nterm = 2, .length = 3, .action = nullptr},
+	[1] = {.nterm = 0, .length = 3, .action = nullptr},
+	[2] = {.nterm = 2, .length = 1, .action = nullptr},
+	[3] = {.nterm = 1, .length = 3, .action = nullptr},
+	[4] = {.nterm = 1, .length = 1, .action = nullptr},
+	[5] = {.nterm = 0, .length = 2, .action = nullptr},
+	[6] = {.nterm = 0, .length = 1, .action = nullptr},
 };
 
 /* Parse table interface */

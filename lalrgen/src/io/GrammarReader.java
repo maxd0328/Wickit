@@ -49,6 +49,7 @@ public class GrammarReader {
 		assert !used : "Grammar reader already used";
 		this.used = true;
 		
+		Production.Precedence precedence = Production.Precedence.SHIFT_PRECEDENCE;
 		while(!isDone()) {
 			String start = nextSymbolNotNull();
 			
@@ -74,6 +75,15 @@ public class GrammarReader {
 				
 				this.usings.add(using.substring(1, using.length() - 1));
 			}
+			else if(start.equals("PRECEDENCE")) {
+				String order = nextSymbolNotNull();
+				int level = 0;
+				assertThat(order.equals("HIGH") || order.equals("LOW"), "expected \'HIGH\' or \'LOW\' after \'PRECEDENCE\'");
+				if(peekSymbol() != null && peekSymbol().matches("[0-9]+"))
+					level = Integer.parseInt(nextSymbolNotNull());
+				precedence = new Production.Precedence(order.equals("HIGH") ? Production.Precedence.HIGH : Production.Precedence.LOW, level);
+				assertThat(peekSymbol() != null && isNonTerminal(peekSymbol()), "expected non-terminal after precedence declaration");
+			}
 			else {
 				assertThat(isNonTerminal(start), "expected non-terminal on left-hand side of production");
 				assertNextSymbol("->");
@@ -92,9 +102,11 @@ public class GrammarReader {
 					semanticAction = semanticAction.substring(1, semanticAction.length() - 1);
 				}
 				
-				Production production = new Production(start.substring(1), prodSymbols, semanticAction);
+				Production production = new Production(start.substring(1), prodSymbols, semanticAction, precedence);
 				assertThat(!productions.contains(production), "duplicate production for " + start);
 				productions.add(production);
+				
+				precedence = Production.Precedence.SHIFT_PRECEDENCE;
 			}
 		}
 		
