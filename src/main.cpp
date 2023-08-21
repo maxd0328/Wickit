@@ -10,14 +10,16 @@ using namespace wckt::base;
 namespace
 { BASIC_CONTEXT_LAYER(LoadingModuleContextLayer, "Error while resolving modules:\n"); }
 
-static void quit(err::ErrorSentinel& sentinel)
+static void quit(err::ErrorSentinel& sentinel, bool fatal = false, const std::string& fatalityMsg = "")
 {
 	if(sentinel.hasErrors())
 	{
 		auto qty = sentinel.getErrors().size();
 		sentinel.flush(std::cout);
 		std::cout << std::endl;
-		std::cout << "Engine terminated with " << qty << " error(s)" << std::endl;
+		if(fatal)
+			std::cout << "Fatal error detected: " << fatalityMsg << std::endl;
+		std::cout << "Engine terminated " << (fatal ? "unexpectedly " : "") << "with " << qty << " error(s)" << std::endl;
 		exit(1);
 	}
 	else exit(0);
@@ -56,7 +58,10 @@ int main()
 	build::BuildContext buildContext(context, context->findModuleID(URL("file://test/module.xml")));
 	buildContext.addAsset(context->getModule(buildContext.getModuleID())
 		.getSource()->getRootPackage().getChildren()[0].getAssets()[0], std::string("test"));
-	build::services::buildFromContext(buildContext, &sentinel);
+	
+	sentinel.guard<FatalCompileError>([&buildContext](err::ErrorSentinel& sentinel) {
+		build::services::buildFromContext(buildContext, &sentinel);
+	}, [&sentinel](const FatalCompileError& err) { quit(sentinel, true, err.what()); });
 	
 	quit(sentinel);
 }

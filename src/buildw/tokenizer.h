@@ -49,12 +49,12 @@
 		_MacroO(_MacroI, KEYW_VAR,						0x6c,		"var",										"\'var\'")				\
 		_MacroO(_MacroI, KEYW_DELEGATE,					0x6d,		"delegate",									"\'delegate\'")			\
 																																		\
-		_MacroO(_MacroI, DELIM_OPEN_PARENTHESIS,		0x80,		"\\(",										"\'(\'")				\
-		_MacroO(_MacroI, DELIM_CLOSE_PARENTHESIS,		0x81,		"\\)",										"\')\'")				\
-		_MacroO(_MacroI, DELIM_OPEN_BRACKET,			0x82,		"\\[",										"\'[\'")				\
-		_MacroO(_MacroI, DELIM_CLOSE_BRACKET,			0x83,		"\\]",										"\']\'")				\
-		_MacroO(_MacroI, DELIM_OPEN_BRACE,				0x84,		"\\{",										"\'{\'")				\
-		_MacroO(_MacroI, DELIM_CLOSE_BRACE,				0x85,		"\\}",										"\'}\'")				\
+		_MacroO(_MacroI, DELIM_LPAREN,					0x80,		"\\(",										"\'(\'")				\
+		_MacroO(_MacroI, DELIM_RPAREN,					0x81,		"\\)",										"\')\'")				\
+		_MacroO(_MacroI, DELIM_LBRACKET,				0x82,		"\\[",										"\'[\'")				\
+		_MacroO(_MacroI, DELIM_RBRACKET,				0x83,		"\\]",										"\']\'")				\
+		_MacroO(_MacroI, DELIM_LBRACE,					0x84,		"\\{",										"\'{\'")				\
+		_MacroO(_MacroI, DELIM_RBRACE,					0x85,		"\\}",										"\'}\'")				\
 		_MacroO(_MacroI, DELIM_SEMICOLON,				0x86,		";",										"\';\'")				\
 		_MacroO(_MacroI, DELIM_COLON,					0x87,		":",										"\':\'")				\
 		_MacroO(_MacroI, DELIM_DOT,						0x88,		"\\.",										"\'.\'")				\
@@ -130,6 +130,7 @@ namespace wckt::build
 			
 			static std::string getClassName(class_t _class);
 			
+			static const std::vector<class_t> CLASSES;
 			static const std::map<class_t, std::string> REGEXPS;
 			static const std::map<class_t, std::string> NICKNAMES;
 			

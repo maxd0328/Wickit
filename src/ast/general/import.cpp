@@ -19,7 +19,7 @@ bool ImportStatement::isWildcard() const
 
 std::string ImportStatement::toString() const
 {
-	return "ImportStatement: " + locator.toString();
+	return "ImportStatement: " + locator.toString() + (this->wildcard ? ".*" : "");
 }
 
 std::vector<ParseObject*> ImportStatement::getElements() const

@@ -19,7 +19,8 @@ const ast::DeclarationSet& TranslationUnit::getDeclarations() const
 
 void TranslationUnit::insertImportStatement(UPTR(ast::ImportStatement)&& statement)
 {
-	this->importStatements.insert(this->importStatements.begin(), std::move(statement));
+	if(statement != nullptr)
+		this->importStatements.insert(this->importStatements.begin(), std::move(statement));
 }
 
 std::string TranslationUnit::toString() const
@@ -29,8 +30,9 @@ std::string TranslationUnit::toString() const
 
 std::vector<ParseObject*> TranslationUnit::getElements() const
 {
-	std::vector<ParseObject*> objects = {this->declarations.get()};
+	std::vector<ParseObject*> objects;
 	for(const auto& statement : this->importStatements)
 		objects.push_back(statement.get());
+	objects.push_back(this->declarations.get());
 	return objects;
 }

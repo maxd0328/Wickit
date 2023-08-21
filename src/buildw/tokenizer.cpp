@@ -5,6 +5,7 @@
 using namespace wckt;
 using namespace wckt::build;
 
+#define __ENUM_TO_TOKEN_CLASS(_Class)			_Class,
 #define __ENUM_TO_STRING_CASE(_Elem)			case _Elem: return #_Elem;
 #define	__ENUM_TO_REGEX_INIT(_Elem, _Regex)		{ _Elem, _Regex },
 #define __ENUM_TO_NICKNAME_INIT(_Elem, _Name)	{ _Elem, _Name },
@@ -17,6 +18,10 @@ std::string Token::getClassName(class_t _class)
 		default: return "<unknown class>";
 	}
 }
+
+const std::vector<Token::class_t> Token::CLASSES = {
+	FOREACH_TOKEN_CLASS(__ENUM_TO_TOKEN_CLASS)
+};
 
 const std::map<Token::class_t, std::string> Token::REGEXPS = {
 	FOREACH_TOKEN_CLASS_REGEXP(__ENUM_TO_REGEX_INIT)
