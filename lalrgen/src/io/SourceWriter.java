@@ -3,6 +3,7 @@ package io;
 import lalr.Grammar;
 import lalr.LALRParseTable;
 import lalr.Production;
+import lalr.Symbol;
 
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,10 @@ public class SourceWriter {
         "",
         "/* Parse table interface */",
         "",
+		"void lalrinit()",
+		"{ static bool _init = false;",
+		"  if(!_init) __init_ACTION_TABLE();",
+		"  _init = true; }",
         "uint32_t lalraction(uint32_t __row, uint32_t __col)",
         "{ return __ACTION_TABLE[__col][__row]; }",
         "uint32_t lalrgoto(uint32_t __row, uint32_t __col)",
@@ -50,18 +55,25 @@ public class SourceWriter {
 	private static final String USING_LINE = "using namespace %s;";
 	private static final String[] DEFAULT_USINGS = {"wckt", "wckt::build"};
 	
-    private static final String ACTION_TABLE_HEADER = "uint32_t __ACTION_TABLE[MAX_TOKEN_PLUS_ONE][%d] = {";
+    private static final String ACTION_TABLE = "uint32_t __ACTION_TABLE[MAX_TOKEN_PLUS_ONE][%d] = {};";
+	private static final String ACTION_TABLE_ROWS_HEADER = "uint32_t __ACTION_TABLE_ROWS[][%d] = {";
+	private static final String ACTION_TABLE_ROWS_ENTRY = "\t{%s},";
+	private static final String ACTION_TABLE_INIT_HEADER = "void __init_ACTION_TABLE()";
+	private static final String ACTION_TABLE_INIT_BODY = "{ %s }";
+	private static final String ACTION_TABLE_INIT_ENTRY = "memcpy(__ACTION_TABLE[Token::%s], __ACTION_TABLE_ROWS[%d], sizeof(__ACTION_TABLE_ROWS[%d]));";
+	
     private static final String GOTO_TABLE_HEADER = "uint32_t __GOTO_TABLE[%d][%d] = {";
+	private static final String GOTO_TABLE_ENTRY = "\t[%d] = {%s},";
+	
     private static final String PROD_TABLE_HEADER = "production_t __PROD_TABLE[%d] = {";
-    private static final String TABLE_FOOTER = "};";
-
-    private static final String ACTION_TABLE_ENTRY = "\t[Token::%s] = {%s},";
-    private static final String GOTO_TABLE_ENTRY = "\t[%d] = {%s},";
-    private static final String PROD_TABLE_ENTRY_NO_ACTION = "\t[%d] = {.nterm = %d, .length = %d, .action = nullptr},";
+	private static final String PROD_TABLE_ENTRY_NO_ACTION = "\t[%d] = {.nterm = %d, .length = %d, .action = nullptr},";
 	private static final String PROD_TABLE_ENTRY_ACTION = "\t[%d] = {.nterm = %d, .length = %d, .action = __psem%d__},";
 	
+    private static final String TABLE_FOOTER = "};";
+	
 	private static final String PSEM_ACTION_HEADER = "PSEM_ACTION(__psem%d__)";
-	private static final String PSEM_ACTION_BODY = "{ %s }";
+	private static final String PSEM_ACTION_BODY = "{%s}";
+	private static final String PSEM_ELEM_DECL = " PMAKE_XELEM(%s, %d)";
 	
     private final File outputFile;
 
@@ -85,14 +97,18 @@ public class SourceWriter {
 		lines.addAll(Arrays.stream(DEFAULT_USINGS).map(use -> String.format(USING_LINE, use)).toList());
 		lines.addAll(grammar.getUsingDirectives().stream().map(use -> String.format(USING_LINE, use)).toList());
 		lines.add("");
-
-        lines.add(String.format(ACTION_TABLE_HEADER, table.getRowCount()));
-        for(int i = 0 ; i < table.getActionColumnCount() ; ++i) {
-            final int _i = i;
-            lines.add(String.format(ACTION_TABLE_ENTRY, table.getActionColumn(i), table.getOrderedRows()
-                .stream().map(row -> String.valueOf(encodeAction(row.getAction(_i)))).collect(Collectors.joining(", "))));
-        }
-        lines.add(TABLE_FOOTER);
+		
+		lines.add(String.format(ACTION_TABLE, table.getRowCount()));
+		lines.add(String.format(ACTION_TABLE_ROWS_HEADER, table.getRowCount()));
+		for(int i = 0 ; i < table.getActionColumnCount() ; ++i) {
+			final int _i = i;
+            lines.add(String.format(ACTION_TABLE_ROWS_ENTRY, table.getOrderedRows().stream()
+				.map(row -> String.valueOf(encodeAction(row.getAction(_i)))).collect(Collectors.joining(", "))));
+		}
+		lines.add(TABLE_FOOTER);
+		lines.add(ACTION_TABLE_INIT_HEADER);
+		lines.add(String.format(ACTION_TABLE_INIT_BODY, IntStream.range(0, table.getActionColumnCount())
+			.mapToObj(i -> String.format(ACTION_TABLE_INIT_ENTRY, table.getActionColumn(i), i, i)).collect(Collectors.joining("\n  "))));
         lines.add("");
 
         lines.add(String.format(GOTO_TABLE_HEADER, table.getGotoColumnCount(), table.getRowCount()));
@@ -111,7 +127,7 @@ public class SourceWriter {
 				continue;
 			addedAction = true;
 			lines.add(String.format(PSEM_ACTION_HEADER, i));
-			lines.add(String.format(PSEM_ACTION_BODY, expandSemanticAction(prod.getSemanticAction())));
+			lines.add(String.format(PSEM_ACTION_BODY, expandElementDeclarations(grammar, prod) + expandSemanticAction(grammar, prod)));
 		}
 		if(addedAction) lines.add("");
 
@@ -150,10 +166,25 @@ public class SourceWriter {
         }
     }
 	
-	private String expandSemanticAction(String semanticAction) {
-		semanticAction = semanticAction.replaceAll("\\$([0-9]+)", "(__xelems__[$1])");
-		semanticAction = semanticAction.replaceAll("\\$NULL", "nullptr");
-		semanticAction = semanticAction.replaceAll("\\$NEW", "PMAKE_UNIQUE");
+	private String expandElementDeclarations(Grammar grammar, Production production) {
+		StringBuilder sb = new StringBuilder();
+		for(int i = 0 ; i < production.getSymbolCount() ; ++i) {
+			Symbol symbol = production.getSymbol(i);
+			if(symbol.isTerminal())
+				sb.append(String.format(PSEM_ELEM_DECL, "ContainerObject<Token>", i));
+			else sb.append(String.format(PSEM_ELEM_DECL, grammar.getActionType(symbol.getValue()), i));
+		}
+		return sb.isEmpty() ? "" : sb.toString() + "\n ";
+	}
+	
+	private String expandSemanticAction(Grammar grammar, Production production) {
+		String semanticAction = production.getSemanticAction();
+		if(semanticAction == null)
+			return null;
+		semanticAction = semanticAction.replaceAll("\\$([0-9]+)P", "PXELEM($1)");
+		semanticAction = semanticAction.replaceAll("\\$([0-9]+)", "PXELEM_MOVE($1)");
+		semanticAction = semanticAction.replaceAll("\\$NULL", "PNULL");
+		semanticAction = semanticAction.replaceAll("\\$NEW", "PMAKE_UNIQUE(" + grammar.getActionType(production.getNonTerminal()) + ")");
 		return semanticAction;
 	}
 

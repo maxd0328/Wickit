@@ -2,6 +2,7 @@
 
 #include "include/definitions.h"
 #include "buildw/build.h"
+#include "buildw/tokenizer.h"
 #include "error/error.h"
 
 namespace wckt::build
@@ -10,13 +11,56 @@ namespace wckt::build
 	{
 		public:
 			virtual ~ParseObject() = default;
+			
+			virtual std::string toString() const = 0;
+			virtual std::vector<ParseObject*> getElements() const = 0;
+			
+			std::string toTreeString(uint32_t tabSize = 3) const;
+	};
+	
+	class DummyObject : public ParseObject
+	{
+		public:
+			inline DummyObject() {}
+			~DummyObject() override = default;
+			
+			inline std::string toString() const override
+			{ return "DummyObject"; }
+			inline std::vector<ParseObject*> getElements() const override
+			{ return {}; }
+	};
+	
+	template<typename _Ty>
+	class ContainerObject : public ParseObject
+	{
+		private:
+			_Ty value;
+			
+		public:
+			ContainerObject(const _Ty& value): value(value) {}
+			~ContainerObject() override = default;
+			
+			const _Ty& get() const		{ return value; }
+			_Ty& get()					{ return value; }
+			
+			inline std::string toString() const override
+			{ return std::string("ContainerObject"); }
+			inline std::vector<ParseObject*> getElements() const override
+			{ return {}; }
 	};
     
 	typedef std::unique_ptr<ParseObject>(*psem_action_t)(std::vector<std::unique_ptr<ParseObject>>&&);
 	
-	#define PMAKE_UNIQUE(_Class, _Args...) std::make_unique<_Class>(_Args)
-	#define PSEM_ACTION(__Name) \
-		std::unique_ptr<ParseObject> __Name(std::vector<std::unique_ptr<ParseObject>>&& __xelems__)
+	#define	UPTR(_Type)						std::unique_ptr<_Type>
+	
+	#define __PXELEM(_Index)				__xelem ## _Index ## __
+	
+	#define PNULL							nullptr
+	#define PMAKE_UNIQUE(_Class)			std::make_unique<_Class>
+	#define PSEM_ACTION(__Name)				UPTR(ParseObject) __Name(std::vector<UPTR(ParseObject)>&& __xelems__)
+	#define PXELEM(_Index)					( __PXELEM(_Index) )
+	#define PXELEM_MOVE(_Index)				( std::move(__PXELEM(_Index)) )
+	#define PMAKE_XELEM(_Type, _Index)		UPTR(_Type) __PXELEM(_Index) = UPTR(_Type)(static_cast<_Type*>(__xelems__[_Index].release()));
 	
     typedef struct
     {

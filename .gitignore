@@ -7,3 +7,6 @@ build/
 
 # Ignore Wickit testing files
 test/
+
+# Ignore LALRGEN output
+src/lalr.cpp

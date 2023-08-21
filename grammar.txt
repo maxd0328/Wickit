@@ -1,25 +1,33 @@
 % Official Wickit Language Grammar
 
 INCLUDE "symbol/locator.h";
-USING "wckt::sym";
+INCLUDE "ast/general/translation.h";
+INCLUDE "ast/general/declset.h";
+INCLUDE "ast/general/import.h";
+USING "wckt::ast";
 
 START #TranslationUnit;
 
 % General Rules ----------------------------------------------------------------------------------------------------------------------------------
 
-#TranslationUnit -> #ImportStatement #TranslationUnit;									{ $1.insertImportStatement($0); return $1; }
-#TranslationUnit -> #DeclarationSet;													{ return $NEW(TranslationUnit, $0); }
+#TranslationUnit -> #ImportStatement #TranslationUnit;									{ $1P->insertImportStatement($0); return $1; }
+#TranslationUnit -> #DeclarationSet;													{ return $NEW($0); }
 
-#ImportStatement -> $KEYW_IMPORT #StaticSymbol #ImportSuffix $DELIM_SEMICOLON;			{ return $NEW(ImportStatement, $1, $2 != $NULL); }
-#ImportSuffix -> $DELIM_DOT $OPERATOR_MUL;												{ return $NEW(DummyNode); }
+#ImportStatement -> $KEYW_IMPORT #StaticSymbol #ImportSuffix $DELIM_SEMICOLON;			{ return $NEW($1->get(), $2 != $NULL); }
+#ImportSuffix -> $DELIM_DOT $OPERATOR_MUL;												{ return $NEW(); }
 #ImportSuffix -> ;																		{ return $NULL; }
 
-#DeclarationSet -> ;																	{ return $NEW(DeclarationSet); }
+#DeclarationSet -> ;																	{ return $NEW(); }
+
+TYPEOF #ImportSuffix "DummyObject";
 
 % Miscellanious Rules ----------------------------------------------------------------------------------------------------------------------------
 
-#StaticSymbol -> #StaticSymbol $DELIM_DOT #Identifier;									{ return $NEW(Locator, $0 + $2); }
-#StaticSymbol -> #Identifier;															{ return $NEW(Locator, $0); }
+#StaticSymbol -> #StaticSymbol $DELIM_DOT #Identifier;									{ return $NEW($0->get() + $2->get()); }
+#StaticSymbol -> #Identifier;															{ return $NEW($0->get()); }
 
-#Identifier -> $IDENTIFIER;																{ return $NEW(std::string, $0.getValue()); }
-#Identifier -> $NO_NAME;																{ return $NEW(std::string, "---"); }
+#Identifier -> $IDENTIFIER;																{ return $NEW($0->get().getValue()); }
+#Identifier -> $NO_NAME;																{ return $NEW("---"); }
+
+TYPEOF #StaticSymbol "ContainerObject<sym::Locator>";
+TYPEOF #Identifier "ContainerObject<std::string>";

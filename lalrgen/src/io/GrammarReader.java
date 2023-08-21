@@ -5,9 +5,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
@@ -24,6 +26,7 @@ public class GrammarReader {
 	private Set<String> usings;
 	private String startSymbol;
 	private Set<Production> productions;
+	private Map<String, String> actionTypes;
 	
 	private boolean used;
 	private Queue<String> symbols;
@@ -38,6 +41,7 @@ public class GrammarReader {
 		this.usings = new HashSet<>();
 		this.startSymbol = null;
 		this.productions = new HashSet<>();
+		this.actionTypes = new HashMap<>();
 		
 		this.used = false;
 		this.symbols = new LinkedList<>();
@@ -75,6 +79,16 @@ public class GrammarReader {
 				
 				this.usings.add(using.substring(1, using.length() - 1));
 			}
+			else if(start.equals("TYPEOF")) {
+				String nonTerminal = nextSymbolNotNull();
+				assertThat(isNonTerminal(nonTerminal), "expected non-terminal after \'TYPEOF\'");
+				String type = nextSymbolNotNull();
+				assertThat(type.startsWith("\""), "expected string after non-terminal");
+				assertNextSymbol(";");
+				
+				assertThat(!this.actionTypes.containsKey(nonTerminal), "multiple TYPEOF declarations for non-terminal \'" + nonTerminal + "\'");
+				this.actionTypes.put(nonTerminal.substring(1), type.substring(1, type.length() - 1));
+			}
 			else if(start.equals("PRECEDENCE")) {
 				String order = nextSymbolNotNull();
 				int level = 0;
@@ -111,7 +125,7 @@ public class GrammarReader {
 		}
 		
 		assertThat(startSymbol != null, "no start symbol declared");
-		return new Grammar(inclusions, usings, startSymbol, productions);
+		return new Grammar(inclusions, usings, startSymbol, productions, actionTypes);
 	}
 	
 	private boolean whitespace(char ch) {

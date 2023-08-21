@@ -8,7 +8,7 @@
 
 # Define commands and arguments
 CXX			= g++
-CXXFLAGS	= -std=c++17 -Wall -Isrc -g
+CXXFLAGS	= -std=c++20 -Wall -Isrc -g
 LALRGEN		= ./lalrgen.sh
 
 # Define source, build, and artifact directories
@@ -42,7 +42,7 @@ lalrgen:
 	make -C lalrgen all
 
 # Make LALR parse table source file
-src/lalr.cpp: grammar.txt
+src/lalr.cpp: lalrgen grammar.txt
 	$(LALRGEN) grammar.txt -o src/lalr.cpp
 
 # Phony target to clean build artifacts
@@ -51,6 +51,7 @@ src/lalr.cpp: grammar.txt
 # Clean up by deleteing build (and artifact) directory
 clean:
 	make -C lalrgen clean
+	rm -f src/lalr.cpp
 	rm -rf $(BUILD_DIR)
 
 # ---------------------------------------------------------------------------

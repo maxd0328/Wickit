@@ -9,16 +9,16 @@
 		_MacroO(_MacroI, END_OF_STREAM,					0x00,		std::string(),								"end-of-stream")		\
 		_MacroO(_MacroI, __NULL__,						0x01,		std::string(),								"<null>")				\
 		_MacroO(_MacroI, ERROR,							0x02,		std::string(),								"<error>")				\
-		_MacroO(_MacroI, KEYW_CONTRACT,					0x02,		"contract",									"\'contract\'")			\
-		_MacroO(_MacroI, KEYW_TEMPLATE,					0x03,		"template",									"\'template\'")			\
-		_MacroO(_MacroI, KEYW_NAMESPACE,				0x04,		"namespace",								"\'namespace\'")		\
-		_MacroO(_MacroI, KEYW_TYPE,						0x05,		"type",										"\'type\'")				\
-		_MacroO(_MacroI, KEYW_AS,						0x06,		"as",										"\'as\'")				\
-		_MacroO(_MacroI, KEYW_EXTENDS,					0x07,		"extends",									"\'extends\'")			\
-		_MacroO(_MacroI, KEYW_FUNCTION,					0x08,		"function",									"\'function\'")			\
-		_MacroO(_MacroI, KEYW_SWITCH,					0x09,		"switch",									"\'switch\'")			\
-		_MacroO(_MacroI, KEYW_CONSTRUCTOR,				0x0a,		"constructor",								"\'constructor\'")		\
-		_MacroO(_MacroI, KEYW_IMPORT,					0x0b,		"import",									"\'import\'")			\
+		_MacroO(_MacroI, KEYW_CONTRACT,					0x03,		"contract",									"\'contract\'")			\
+		_MacroO(_MacroI, KEYW_TEMPLATE,					0x04,		"template",									"\'template\'")			\
+		_MacroO(_MacroI, KEYW_NAMESPACE,				0x05,		"namespace",								"\'namespace\'")		\
+		_MacroO(_MacroI, KEYW_TYPE,						0x06,		"type",										"\'type\'")				\
+		_MacroO(_MacroI, KEYW_AS,						0x07,		"as",										"\'as\'")				\
+		_MacroO(_MacroI, KEYW_EXTENDS,					0x08,		"extends",									"\'extends\'")			\
+		_MacroO(_MacroI, KEYW_FUNCTION,					0x09,		"function",									"\'function\'")			\
+		_MacroO(_MacroI, KEYW_SWITCH,					0x0a,		"switch",									"\'switch\'")			\
+		_MacroO(_MacroI, KEYW_CONSTRUCTOR,				0x0b,		"constructor",								"\'constructor\'")		\
+		_MacroO(_MacroI, KEYW_IMPORT,					0x0c,		"import",									"\'import\'")			\
 																																		\
 		_MacroO(_MacroI, KEYW_PUBLIC,					0x20,		"public",									"\'public\'")			\
 		_MacroO(_MacroI, KEYW_RESTRICTED,				0x21,		"restricted",								"\'restricted\'")		\
@@ -122,9 +122,7 @@
 
 namespace wckt::build
 {
-	class ParseObject;
-	
-	class Token : public SourceSegment, public ParseObject
+	class Token : public SourceSegment
 	{
 		public:
 			enum class_t

@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <locale>
 #include <filesystem>
+#include <cstring>
 
 // Define 8-bit characters
 typedef uint8_t     uchar_t;

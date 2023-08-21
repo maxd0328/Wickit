@@ -17,10 +17,12 @@ public class Grammar {
 	private final String startSymbol;
 	private final HashSet<Production> productions;
 	
+	private final Map<String, String> actionTypes;
+	
 	// Contains the cached FIRST sets for each production
 	private final Map<Production, Set<String>> productionCache;
 	
-	public Grammar(Set<String> includeDirectives, Set<String> usingDirectives, String startSymbol, Set<Production> productions) {
+	public Grammar(Set<String> includeDirectives, Set<String> usingDirectives, String startSymbol, Set<Production> productions, Map<String, String> actionTypes) {
 		assert startSymbol != null && productions != null && productions.size() > 0;
 		assert includeDirectives != null && usingDirectives != null;
 		assert productions.stream().filter(prod -> prod.getNonTerminal().equals(startSymbol)).findAny().isPresent();
@@ -29,6 +31,7 @@ public class Grammar {
 		
 		this.startSymbol = startSymbol;
 		this.productions = new HashSet<>(productions);
+		this.actionTypes = new HashMap<>(actionTypes);
 		
 		this.productionCache = new HashMap<>();
 	}
@@ -49,6 +52,10 @@ public class Grammar {
 		return Collections.unmodifiableSet(productions);
 	}
 	
+	public Map<String, String> getActionTypes() {
+		return actionTypes;
+	}
+	
 	public int getProductionCount() {
 		return productions.size();
 	}
@@ -59,6 +66,12 @@ public class Grammar {
 			if(prod.getNonTerminal().equals(nonTerminal))
 				prods.add(prod);
 		return prods;
+	}
+	
+	public String getActionType(String nonTerminal) {
+		if(actionTypes.containsKey(nonTerminal))
+			return actionTypes.get(nonTerminal);
+		else return nonTerminal;
 	}
 	
 	public Set<String> getFirstSet(String nonTerminal) {
@@ -146,6 +159,17 @@ public class Grammar {
 		return symbols;
 	}
 	
+	public void ensureGrammarLegality() {
+		Set<Symbol> symbols = getReachableSymbols();
+		for(Symbol symbol : symbols) {
+			if(symbol.isTerminal())
+				continue;
+			
+			if(getProductionsOf(symbol.getValue()).isEmpty())
+				throw new IllegalStateException("No derivations for non-terminal \'" + symbol.getValue() + "\'");
+		}
+	}
+	
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder("Grammar [" + startSymbol + "]:");
@@ -153,8 +177,6 @@ public class Grammar {
 			sb.append("\n\t").append(prod.toString());
 		return sb.toString();
 	}
-	
-	
 	
 	@Override
 	public boolean equals(Object o) {

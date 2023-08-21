@@ -1,10 +1,51 @@
 #include "buildw/parser.h"
 #include "buildw/tokenizer.h"
 #include "buildw/source.h"
-#include "ast/general.h"
+#include "ast/general/translation.h"
 
 using namespace wckt;
 using namespace wckt::build;
+
+typedef struct
+{
+	const ParseObject* object;
+	uint32_t tabCount;
+	bool started;
+} tree_state_t;
+
+std::string ParseObject::toTreeString(uint32_t tabSize) const
+{
+	std::stringstream ss;
+	std::stack<tree_state_t> stack;
+	stack.push({ .object = this, .tabCount = 0, .started = false });
+	
+	while(!stack.empty())
+	{
+		tree_state_t& state = stack.top();
+		if(!state.started)
+		{
+			ss << std::string(state.tabCount * tabSize, ' ') << "<" << state.object->toString() << ">";
+			std::vector<ParseObject*> elems = state.object->getElements();
+			if(!elems.empty())
+			{
+				for(uint32_t i = elems.size() ; i > 0 ; --i)
+					stack.push({ .object = elems[i - 1], .tabCount = state.tabCount + 1, .started = false });
+				state.started = true;
+			}
+			else stack.pop();
+		}
+		else
+		{
+			ss << std::string(state.tabCount * tabSize, ' ') << "</" << state.object->toString() << ">";
+			stack.pop();
+		}
+		
+		if(!stack.empty())
+			ss << std::endl;
+	}
+	
+	return ss.str();
+}
 
 #define _NULL_TOKEN Token(Token::__NULL__, " ", 0)
 
@@ -82,6 +123,7 @@ typedef struct
 } state_t;
 
 /* Imported from LALR parse table generator */
+extern void lalrinit();
 extern uint32_t lalraction(uint32_t __row, uint32_t __col);
 extern uint32_t lalrgoto(uint32_t __row, uint32_t __col);
 extern production_t lalrprod(uint32_t __row);
@@ -130,6 +172,9 @@ void services::parse(build_info_t& buildInfo, err::ErrorSentinel* parentSentinel
     err::ErrorSentinel sentinel(parentSentinel, err::ErrorSentinel::COLLECT, [&buildInfo, &lookAhead](err::PTR_ErrorContextLayer ptr) {
         return _MAKE_ERR(IntrasourceContextLayer, std::move(ptr), lookAhead, buildInfo.sourceTable);
     });
+	
+	// Init LALR parse table if not done already
+	lalrinit();
 
 	// LALR parsing iteration
     for(;;)
@@ -145,7 +190,7 @@ void services::parse(build_info_t& buildInfo, err::ErrorSentinel* parentSentinel
         {
             case SHIFT: {
 				// For shift actions, simply shift to the next state and consume the look-ahead
-				stack.push({.number = action.number, .object = PMAKE_UNIQUE(Token, lookAhead)});
+				stack.push({.number = action.number, .object = PMAKE_UNIQUE(ContainerObject<Token>)(lookAhead)});
 				iterator.next();
 				
 				// If we are shifting the ERROR token, we panic until either END_OF_STREAM or a matchable look-ahead

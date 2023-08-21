@@ -129,6 +129,9 @@ public class Main {
 		catch(GrammarFormatException ex) { error("While reading grammar file:\n" + ex.getMessage()); }
 		catch(IOException ex) { error("Failed to read file \'" + arguments.getInputFile() + "\', please verify file permissions"); }
 		
+		try { grammar.ensureGrammarLegality(); }
+		catch(IllegalStateException ex) { error("Illegal grammar detected: " + ex.getMessage()); }
+		
 		StateGenerator stateGenerator = new StateGenerator();
 		Set<State> states = stateGenerator.computeStates(grammar);
 		

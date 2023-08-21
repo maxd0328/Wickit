@@ -2,6 +2,7 @@
 #include "buildw/tokenizer.h"
 #include "buildw/parser.h"
 #include "include/exception.h"
+#include "ast/general/translation.h"
 
 using namespace wckt;
 using namespace wckt::build;
@@ -118,6 +119,8 @@ void services::buildFromContext(const BuildContext& context, err::ErrorSentinel*
 			std::cout << token.toString() << std::endl;
 		
 		services::parse(buildInfo, &sentinel);
+		
+		std::cout << buildInfo.translationUnit->toTreeString() << std::endl;
 		// ...
 	}
 }
