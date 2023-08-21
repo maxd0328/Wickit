@@ -1,28 +1,10 @@
 #include "buildw/parser.h"
 #include "buildw/tokenizer.h"
 #include "buildw/source.h"
+#include "ast/general.h"
 
 using namespace wckt;
 using namespace wckt::build;
-
-ParseOutput::ParseOutput(std::unique_ptr<ParseObject> object)
-: object(std::move(object))
-{}
-
-const ParseObject& ParseOutput::getObject() const
-{
-	return *this->object;
-}
-
-ParseObject& ParseOutput::getObject()
-{
-	return *this->object;
-}
-
-std::unique_ptr<ParseObject>&& ParseOutput::releaseObject()
-{
-	return std::move(this->object);
-}
 
 #define _NULL_TOKEN Token(Token::__NULL__, " ", 0)
 
@@ -211,17 +193,17 @@ void services::parse(build_info_t& buildInfo, err::ErrorSentinel* parentSentinel
 				
 				// If there is no such state that accepts the ERROR token, we abort parsing (this shouldn't happen)
 				// Otherwise, we insert the ERROR token and continue parsing from this state
-				if(action.type == ERROR)
-				{
-					sentinel.raise(_MAKE_STD_ERR("No error recovery rule available; parsing terminated"));
-					goto finish;
-				}
-				else iterator.insert(Token(Token::ERROR, " ", lookAhead.getPosition()));
+				assert(action.type != ERROR, "No error recovery rule available");
+				iterator.insert(Token(Token::ERROR, " ", lookAhead.getPosition()));
 			}
         }
     }
 	
     finish:
-	auto object = std::move(stack.top().object);
-	// TODO convert into a usable form and return...
+	std::unique_ptr<ParseObject> object = std::move(stack.top().object);
+	TranslationUnit* raw = dynamic_cast<TranslationUnit*>(object.release());
+	assert(raw != nullptr, "Parse output is not an instance of TranslationUnit");
+
+	std::shared_ptr<TranslationUnit> translationUnit = std::shared_ptr<TranslationUnit>(raw);
+	buildInfo.translationUnit = translationUnit;
 }

@@ -6,9 +6,10 @@
 # Max Derbenwick 2023
 # ---------------------------------------------------------------------------
 
-# Define compiler and arguments
+# Define commands and arguments
 CXX			= g++
 CXXFLAGS	= -std=c++17 -Wall -Isrc -g
+LALRGEN		= ./lalrgen.sh
 
 # Define source, build, and artifact directories
 SRC_DIR		= src
@@ -16,7 +17,7 @@ BUILD_DIR	= build
 OBJ_DIR		= $(BUILD_DIR)/artifacts
 
 # Locate all source files
-SRCS = $(shell find src -name '*.cpp')
+SRCS = $(shell find src -name '*.cpp') src/lalr.cpp
 
 # Locate all object files (build artifacts)
 OBJS = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
@@ -39,6 +40,10 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 # Make LALRGEN sub-project
 lalrgen:
 	make -C lalrgen all
+
+# Make LALR parse table source file
+src/lalr.cpp: grammar.txt
+	$(LALRGEN) grammar.txt -o src/lalr.cpp
 
 # Phony target to clean build artifacts
 .PHONY: clean lalrgen

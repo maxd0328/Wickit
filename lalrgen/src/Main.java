@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.Scanner;
 import java.util.Set;
 
+import io.CommandArguments;
 import io.GrammarReader;
 import io.SourceWriter;
 import io.GrammarReader.GrammarFormatException;
@@ -112,29 +113,36 @@ public class Main {
 	}
 	
 	public static void main(String[] args) {
-		String inFilename = "testgrammar.txt";
-		String outFilename = "src/lalr.cpp";
-		boolean autoConflictResolutionDisabled = false;
-		verbose = false;
-		
+		CommandArguments arguments = null;
+		try { arguments = new CommandArguments(args); }
+		catch(IllegalArgumentException ex) { error(ex.getMessage()); }
+
+		arguments.doModeOperation(Main::info);
+		verbose = arguments.isVerboseEnabled();
+
 		GrammarReader reader = null;
-		try { reader = new GrammarReader(new FileInputStream(new File(inFilename))); }
-		catch (FileNotFoundException e) { error("File not found: " + inFilename); }
+		try { reader = new GrammarReader(new FileInputStream(new File(arguments.getInputFile()))); }
+		catch (FileNotFoundException ex) { error("File not found: " + arguments.getInputFile()); }
 		
 		Grammar grammar = null;
 		try { grammar = reader.read(); }
 		catch(GrammarFormatException ex) { error("While reading grammar file:\n" + ex.getMessage()); }
-		catch(IOException ex) { error("Failed to read file \'" + inFilename + "\', please verify file permissions"); }
+		catch(IOException ex) { error("Failed to read file \'" + arguments.getInputFile() + "\', please verify file permissions"); }
 		
 		StateGenerator stateGenerator = new StateGenerator();
 		Set<State> states = stateGenerator.computeStates(grammar);
 		
-		TableGenerator tableGenerator = new TableGenerator(Main::resolveConflicts, Main::informConflicts, !autoConflictResolutionDisabled);
+		TableGenerator tableGenerator = new TableGenerator(Main::resolveConflicts, Main::informConflicts, arguments.isAutoResolutionEnabled());
 		LALRParseTable table = tableGenerator.generateParseTable(grammar, states);
 		
-		SourceWriter writer = new SourceWriter(new File(outFilename));
-		try { writer.write(grammar, table); }
-		catch(IOException ex) { error("Failed to write source file \'" + outFilename + "\', please verify file permissions"); }
+		if(arguments.isShowTableEnabled())
+			info(table.toString());
+
+		if(arguments.getOutputFile() != null) {
+			SourceWriter writer = new SourceWriter(new File(arguments.getOutputFile()));
+			try { writer.write(grammar, table); }
+			catch(IOException ex) { error("Failed to write source file \'" + arguments.getOutputFile() + "\', please verify file permissions"); }
+		}
 	}
 	
 }

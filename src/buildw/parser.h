@@ -11,22 +11,7 @@ namespace wckt::build
 		public:
 			virtual ~ParseObject() = default;
 	};
-	
-	class ParseOutput : public ParseObject
-	{
-		private:
-			std::unique_ptr<ParseObject> object;
-			
-		public:
-			ParseOutput(std::unique_ptr<ParseObject> object);
-			~ParseOutput() override = default;
-			
-			const ParseObject& getObject() const;
-			ParseObject& getObject();
-			
-			std::unique_ptr<ParseObject>&& releaseObject();
-	};
-	
+    
 	typedef std::unique_ptr<ParseObject>(*psem_action_t)(std::vector<std::unique_ptr<ParseObject>>&&);
 	
 	#define PMAKE_UNIQUE(_Class, _Args...) std::make_unique<_Class>(_Args)

@@ -8,8 +8,9 @@
 
 namespace wckt::build
 {
-	/* Forward declaration */
+	/* Forward declarations */
 	class Token;
+	class TranslationUnit;
 	
 	typedef struct
 	{
@@ -21,6 +22,7 @@ namespace wckt::build
 	{
 		std::shared_ptr<SourceTable> sourceTable;
 		std::shared_ptr<std::vector<Token>> tokenSequence;
+		std::shared_ptr<TranslationUnit> translationUnit;
 		// ...
 	} build_info_t;
 	
