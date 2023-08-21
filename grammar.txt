@@ -19,8 +19,7 @@ START #TranslationUnit;
 #ImportSuffix -> ;																		{ return $NULL; }
 
 #DeclarationSet -> #DeclarationSet #Declaration;										{ return $NEW(); }
-#DeclarationSet -> #Declaration;
-#DeclarationSet -> ;
+#DeclarationSet -> ;																	{ return $NEW(); }
 
 TYPEOF #ImportSuffix "DummyObject";
 
@@ -31,9 +30,12 @@ TYPEOF #ImportSuffix "DummyObject";
 
 #NamespaceDeclaration -> $KEYW_NAMESPACE #Identifier $DELIM_LBRACE
 							#DeclarationSet $DELIM_RBRACE;
+#NamespaceDeclaration -> $KEYW_NAMESPACE $ERROR $DELIM_LBRACE
+							#DeclarationSet $DELIM_RBRACE;
 
 #TypeDeclaration -> $KEYW_TYPE #Identifier #GenericTypeDeclarator
 							$KEYW_AS #Type $DELIM_SEMICOLON;
+#TypeDeclaration -> $KEYW_TYPE $ERROR $DELIM_SEMICOLON;
 
 % Type Expressions -------------------------------------------------------------------------------------------------------------------------------
 
@@ -47,6 +49,8 @@ TYPEOF #ImportSuffix "DummyObject";
 
 #FunctionType -> #GenericTypeDeclarator $DELIM_LPAREN #OptionalTypeList
 						$DELIM_RPAREN $OPERATOR_ARROW #ReturnPostfixType;
+#FunctionType -> $DELIM_LPAREN #OptionalTypeList $DELIM_RPAREN
+						$OPERATOR_ARROW #ReturnPostfixType;
 #FunctionType -> #PostfixType $OPERATOR_ARROW #ReturnPostfixType;
 #FunctionType -> #PostfixType;
 
@@ -58,19 +62,18 @@ TYPEOF #ImportSuffix "DummyObject";
 #PostfixType -> #UnitType;
 
 #UnitType -> #StaticSymbol #GenericTypeSpecifier;
+#UnitType -> #StaticSymbol;
 #UnitType -> $DELIM_LPAREN #Type $DELIM_RPAREN;
 #UnitType -> $DELIM_LPAREN $ERROR $DELIM_RPAREN;
 
 #GenericTypeDeclarator -> $OPERATOR_LESS #GenericTypeDeclaratorImpl $OPERATOR_GREATER;
-#GenericTypeDeclarator -> ;
 #GenericTypeDeclaratorImpl -> #GenericType $DELIM_COMMA #GenericTypeDeclaratorImpl;
 #GenericTypeDeclaratorImpl -> #GenericType;
 
 #GenericType -> #Identifier;
 #GenericType -> #Identifier $KEYW_SATISFIES #Type;
 
-#GenericTypeSpecifier -> $OPERATOR_LESS #OptionalTypeList $OPERATOR_GREATER
-#GenericTypeSpecifier -> ;
+#GenericTypeSpecifier -> $OPERATOR_LESS #OptionalTypeList $OPERATOR_GREATER;
 
 % Miscellanious Rules ----------------------------------------------------------------------------------------------------------------------------
 
@@ -81,6 +84,7 @@ TYPEOF #ImportSuffix "DummyObject";
 #Identifier -> $NO_NAME;																{ return $NEW("---"); }
 
 #TypeList -> #Type $DELIM_COMMA #TypeList;
+PRECEDENCE LOW
 #TypeList -> #Type;
 #OptionalTypeList -> #TypeList;
 #OptionalTypeList -> ;

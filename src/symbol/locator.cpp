@@ -9,7 +9,7 @@ using namespace wckt;
 using namespace wckt::sym;
 
 // TODO integrate this with tokenizer for consistent identifiers
-static std::regex identifierRegex("[A_Za-z$_][A_Za-z0-9$_]*");
+static std::regex identifierRegex("[A-Za-z$_][A-Za-z0-9$_]*");
 
 Locator::Locator()
 : Locator(_MODULEID_NPOS)

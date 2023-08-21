@@ -69,12 +69,12 @@ public class TableGenerator {
 			// Store a map of lookaheads to actions, we use this to get all actions that may contribute to a conflict
 			Map<String, Set<LALRParseTable.Action>> actionMap = new HashMap<>();
 			int[] gotos = new int[nonTerminalQty];
-			
+
 			// We first iterate through every transition, and use this to create the SHIFT, ACCEPT, and GOTO entries
 			for(Map.Entry<Symbol, State.Transition> entry : state.getTransitions().entrySet()) {
 				Symbol symbol = entry.getKey();
 				State.Transition transition = entry.getValue();
-				
+
 				// If the transition symbol is non-terminal, it's a GOTO entry, getting the column number from the mapping above
 				if(symbol.isNonTerminal())
 					gotos[nonTerminalMap.get(symbol.getValue())] = transition.getTarget().getStateNumber();
@@ -111,7 +111,7 @@ public class TableGenerator {
 				// If it has more than one action we use the conflict resolution agent to choose one that we insert
 				if(actionSet.isEmpty())
 					continue;
-				if(actionSet.size() > 1) chosenAction = resolveConflict(productionQty, terminal, actionSet, stateMap, allProductions);
+				if(actionSet.size() > 1) chosenAction = resolveConflict(state.getStateNumber(), terminal, actionSet, stateMap, allProductions);
 				else chosenAction = actionSet.stream().findFirst().orElse(null);
 				
 				actions[terminalMap.get(terminal)] = chosenAction;

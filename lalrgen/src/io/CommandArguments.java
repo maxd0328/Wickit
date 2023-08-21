@@ -15,6 +15,7 @@ public class CommandArguments {
 		"   -o      --output      Specify the output filepath",
 		"   -v      --verbose     Enable verbose terminal output",
 		"   -s      --show-table  Display parse table in terminal",
+		"   --show-states         Display information about each state",
 		"   --no-auto             Disable auto-conflict resolution",
 		"   --version             Display version information"
 	};
@@ -30,6 +31,7 @@ public class CommandArguments {
 	private final boolean verbose;
 	private final boolean noAutoResolution;
 	private final boolean showTable;
+	private final boolean showStates;
 
 	public CommandArguments(String[] args) {
 		Queue<String> queue = new LinkedList<>(Arrays.asList(args));
@@ -39,7 +41,8 @@ public class CommandArguments {
 		String outputFile = null;
 		boolean verbose = false,
 			noAutoResolution = false,
-			showTable = false;
+			showTable = false,
+			showStates = false;
 		
 		while(!queue.isEmpty()) {
 			String arg = queue.poll();
@@ -70,6 +73,9 @@ public class CommandArguments {
 				case "--show-table":
 					showTable = true;
 					break;
+				case "--show-states":
+					showStates = true;
+					break;
 				default:
 					assertThat(inputFile == null, "Multiple input files specified");
 					inputFile = arg;
@@ -79,7 +85,7 @@ public class CommandArguments {
 
 		if(mode == Mode.EXECUTE) {
 			assertThat(inputFile != null, "No input file specified");
-			assertThat(outputFile != null || showTable, "No output file specified");
+			assertThat(outputFile != null || showTable || showStates, "No output file specified");
 		}
 
 		this.mode = mode;
@@ -88,6 +94,7 @@ public class CommandArguments {
 		this.verbose = verbose;
 		this.noAutoResolution = noAutoResolution;
 		this.showTable = showTable;
+		this.showStates = showStates;
 	}
 
 	public Mode getMode() {
@@ -112,6 +119,10 @@ public class CommandArguments {
 
 	public boolean isShowTableEnabled() {
 		return showTable;
+	}
+
+	public boolean isShowStatesEnabled() {
+		return showStates;
 	}
 
 	public void doModeOperation(Informer informer) {

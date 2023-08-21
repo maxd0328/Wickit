@@ -135,6 +135,13 @@ public class Main {
 		StateGenerator stateGenerator = new StateGenerator();
 		Set<State> states = stateGenerator.computeStates(grammar);
 		
+		if(arguments.isShowStatesEnabled()) {
+			for(State state : stateGenerator.toOrderedList(states)) {
+				info(state.toString());
+				info("");
+			}
+		}
+
 		TableGenerator tableGenerator = new TableGenerator(Main::resolveConflicts, Main::informConflicts, arguments.isAutoResolutionEnabled());
 		LALRParseTable table = tableGenerator.generateParseTable(grammar, states);
 		

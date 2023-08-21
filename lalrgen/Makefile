@@ -6,8 +6,9 @@
 # ---------------------------------------------------------------------------
 
 # Define compiler commands
-JAVAC = javac
-JAVA = java
+JAVAC		= javac
+JAVA		= java
+JAVACFLAGS	= -g
 
 # Specify source and build directories
 SRCDIR = src
@@ -27,7 +28,7 @@ $(BINDIR):
 
 # Build each class from source
 $(CLASSES): $(SOURCES) | $(BINDIR)
-	$(JAVAC) -cp $(CLASSPATH) -d $(BINDIR) $(SOURCES)
+	$(JAVAC) $(JAVACFLAGS) -cp $(CLASSPATH) -d $(BINDIR) $(SOURCES)
 	@touch $(CLASSES)
 
 # Delete build directory
