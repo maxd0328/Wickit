@@ -176,7 +176,7 @@ Expression8:
 
 Expression8Rest:
     (>|>=|<|<=) Expression9
-    satisfies ( Type )
+    satisfies Type
 
 Expression9:
     Expression10 { (<<|>>) Expression10 }
@@ -188,7 +188,7 @@ Expression11:
     Expression12 { (*|/|%) Expression12 }
 
 Expression12:
-    ^ PostfixType Expression12
+    (Type) Expression12
     Expression13
 
 Expression13:

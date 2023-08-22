@@ -90,6 +90,95 @@ TYPEOF #GenericTypeDeclaratorImpl "GenericTypeDeclarator";
 TYPEOF #OptionalGenericTypeDeclarator "GenericTypeDeclarator";
 TYPEOF #OptionalGenericTypeSpecifier "GenericTypeSpecifier";
 
+% Expressions ------------------------------------------------------------------------------------------------------------------------------------
+
+#Expression -> #Expression1 $OPERATOR_ASSIGN #Expression;
+#Expression -> #Expression1 $OPERATOR_OTHER_ASSIGN #Expression;
+#Expression -> #Expression1;
+
+#Expression1 -> #Expression2 $OPERATOR_OPTIONAL #Expression $DELIM_COLON #Expression1;
+#Expression1 -> #Expression2;
+
+#Expression2 -> #Expression2 $OPERATOR_LAZY_OR #Expression3;
+#Expression2 -> #Expression3;
+
+#Expression3 -> #Expression3 $OPERATOR_LAZY_AND #Expression4;
+#Expression3 -> #Expression4;
+
+#Expression4 -> #Expression4 $OPERATOR_OR #Expression5;
+#Expression4 -> #Expression5;
+
+#Expression5 -> #Expression5 $OPERATOR_XOR #Expression6;
+#Expression5 -> #Expression6;
+
+#Expression6 -> #Expression6 $OPERATOR_AND #Expression7;
+#Expression6 -> #Expression7;
+
+#Expression7 -> #Expression7 $OPERATOR_EQUALS #Expression8;
+#Expression7 -> #Expression7 $OPERATOR_NOT_EQUALS #Expression8;
+#Expression7 -> #Expression7 $OPERATOR_STRICT_EQUALS #Expression8;
+#Expression7 -> #Expression7 $OPERATOR_STRICT_NOT_EQUALS #Expression8;
+#Expression7 -> #Expression8;
+
+#Expression8 -> #Expression8 $OPERATOR_GREATER #Expression9;
+#Expression8 -> #Expression8 $OPERATOR_LESS #Expression9;
+#Expression8 -> #Expression8 $OPERATOR_GREATER_OR_EQUAL #Expression9;
+#Expression8 -> #Expression8 $OPERATOR_LESS_OR_EQUAL #Expression9;
+#Expression8 -> #Expression8 $KEYW_SATISFIES #PostfixType;
+#Expression8 -> #Expression9;
+
+#Expression9 -> #Expression9 $OPERATOR_SHL #Expression10;
+#Expression9 -> #Expression9 $OPERATOR_SHR #Expression10;
+#Expression9 -> #Expression10;
+
+#Expression10 -> #Expression10 $OPERATOR_ADD #Expression11;
+#Expression10 -> #Expression10 $OPERATOR_SUB #Expression11;
+#Expression10 -> #Expression11;
+
+#Expression11 -> #Expression11 $OPERATOR_MUL #Expression12;
+#Expression11 -> #Expression11 $OPERATOR_DIV #Expression12;
+#Expression11 -> #Expression11 $OPERATOR_MOD #Expression12;
+#Expression11 -> #Expression12;
+
+#Expression12 -> $DELIM_LPAREN #Type $DELIM_RPAREN #Expression12;
+#Expression12 -> #Expression13;
+
+#Expression13 -> $OPERATOR_ADD #Expression13;
+#Expression13 -> $OPERATOR_SUB #Expression13;
+#Expression13 -> $OPERATOR_BITWISE_NOT #Expression13;
+#Expression13 -> $OPERATOR_LOGICAL_NOT #Expression13;
+#Expression13 -> $OPERATOR_INC #Expression13;
+#Expression13 -> $OPERATOR_DEC #Expression13;
+#Expression13 -> #Expression14;
+
+#Expression14 -> #Expression14 $OPERATOR_INC;
+#Expression14 -> #Expression14 $OPERATOR_DEC;
+#Expression14 -> #Expression15;
+
+#Expression15 -> #Expression15 $DELIM_DOT #Identifier;
+#Expression15 -> #Expression15 $DELIM_LPAREN #OptionalExpressionList $DELIM_RPAREN;
+#Expression15 -> #Expression15 $DELIM_LBRACKET #OptionalExpressionList $DELIM_RBRACKET;
+#Expression15 -> #Expression16;
+
+#Expression16 -> $DELIM_LPAREN #Expression $DELIM_RPAREN;
+#Expression16 -> $KEYW_THIS;
+#Expression16 -> $INT_LITERAL;
+#Expression16 -> $FLOAT_LITERAL;
+#Expression16 -> $BOOL_LITERAL;
+#Expression16 -> $CHARACTER_LITERAL;
+#Expression16 -> $STRING_LITERAL;
+#Expression16 -> #Identifier;
+#Expression16 -> $DELIM_LBRACKET #OptionalExpressionList $DELIM_RBRACKET;
+#Expression16 -> $DELIM_LBRACE #ObjectDeclarationSet $DELIM_RBRACE;
+#Expression16 -> #ConstructorInvocation;
+#Expression16 -> #AnonymousFunction;
+
+#ConstructorInvocation -> $KEYW_NEW #StaticSymbol $DELIM_LPAREN
+							#OptionalExpressionList $DELIM_RPAREN;
+#ConstructorInvocation -> $KEYW_NEW #StaticSymbol;
+
+#AnonymousFunction -> ...
+
 % Miscellanious Rules ----------------------------------------------------------------------------------------------------------------------------
 
 #StaticSymbol -> #StaticSymbol $DELIM_DOT #Identifier;									{ return $NEW($0->get() + $2->get()); }
@@ -104,6 +193,11 @@ PRECEDENCE LOW
 																						  vec.push_back($0); return $NEW(std::move(vec)); }
 #OptionalTypeList -> #TypeList;															{ return $0; }
 #OptionalTypeList -> ;																	{ return $NEW(std::vector<UPTR(TypeExpression)>()); }
+
+#ExpressionList -> #Expression $DELIM_COMMA #ExpressionList;
+#ExpressionList -> #Expression;
+#OptionalExpressionList -> #ExpressionList;
+#OptionalExpressionList -> ;
 
 TYPEOF #StaticSymbol "ContainerObject<sym::Locator>";
 TYPEOF #Identifier "ContainerObject<std::string>";
