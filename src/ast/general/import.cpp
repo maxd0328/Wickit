@@ -8,21 +8,15 @@ ImportStatement::ImportStatement(const sym::Locator& locator, bool wildcard)
 : locator(locator), wildcard(wildcard) {}
 
 sym::Locator ImportStatement::getLocator() const
-{
-	return this->locator;
-}
+{ return this->locator; }
 
 bool ImportStatement::isWildcard() const
-{
-	return this->wildcard;
-}
+{ return this->wildcard; }
 
 std::string ImportStatement::toString() const
-{
-	return "ImportStatement: " + locator.toString() + (this->wildcard ? ".*" : "");
-}
+{ return "ImportStatement: " + locator.toString() + (this->wildcard ? ".*" : ""); }
 
-std::vector<ParseObject*> ImportStatement::getElements() const
-{
-	return {};
-}
+std::vector<const ParseObject*> ImportStatement::getElements() const
+{ return {}; }
+std::vector<ParseObject*> ImportStatement::getElements()
+{ return {}; }

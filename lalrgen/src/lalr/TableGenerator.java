@@ -44,7 +44,7 @@ public class TableGenerator {
 		// Create a list of all the non-terminals, terminals, and productions given the reachable symbols
 		List<String> allNonTerminals = allSymbols.stream().filter(Symbol::isNonTerminal).map(Symbol::getValue).toList();
 		List<String> allTerminals = allSymbols.stream().filter(Symbol::isTerminal).map(Symbol::getValue).toList();
-		List<Production> allProductions = new ArrayList<>(grammar.getProductions());
+		List<Production> allProductions = new ArrayList<>(grammar.getProductions().stream().filter(prod -> allNonTerminals.contains(prod.getNonTerminal())).toList());
 		int nonTerminalQty = allNonTerminals.size(),
 			terminalQty = allTerminals.size(),
 			productionQty = allProductions.size();
@@ -71,21 +71,21 @@ public class TableGenerator {
 			int[] gotos = new int[nonTerminalQty];
 
 			// We first iterate through every transition, and use this to create the SHIFT, ACCEPT, and GOTO entries
-			for(Map.Entry<Symbol, State.Transition> entry : state.getTransitions().entrySet()) {
+			for(Map.Entry<Symbol, State> entry : state.getTransitions().entrySet()) {
 				Symbol symbol = entry.getKey();
-				State.Transition transition = entry.getValue();
+				State transitionState = entry.getValue();
 
 				// If the transition symbol is non-terminal, it's a GOTO entry, getting the column number from the mapping above
 				if(symbol.isNonTerminal())
-					gotos[nonTerminalMap.get(symbol.getValue())] = transition.getTarget().getStateNumber();
+					gotos[nonTerminalMap.get(symbol.getValue())] = transitionState.getStateNumber();
 				else {
 					// Otherwise, its either a SHIFT or ACCEPT. A null transition state in our case is used to represent successfully
 					// matching and end-of-stream, and hence we put ACCEPT in the action map, otherwise we put a SHIFT
 					Set<LALRParseTable.Action> curActionSet = getOrCreateSet(actionMap, symbol.getValue());
-					if(transition.getTarget() == null)
+					if(transitionState == null)
 						curActionSet.add(new LALRParseTable.Action(LALRParseTable.Action.ACCEPT));
 					else
-						curActionSet.add(new LALRParseTable.Action(LALRParseTable.Action.SHIFT, transition.getTarget().getStateNumber()));
+						curActionSet.add(new LALRParseTable.Action(LALRParseTable.Action.SHIFT, transitionState.getStateNumber()));
 				}
 			}
 			

@@ -25,7 +25,9 @@ std::string ParseObject::toTreeString(uint32_t tabSize) const
 		if(!state.started)
 		{
 			ss << std::string(state.tabCount * tabSize, ' ') << "<" << state.object->toString() << ">";
-			std::vector<ParseObject*> elems = state.object->getElements();
+			std::vector<const ParseObject*> elems = state.object->getElements();
+			elems.erase(std::remove_if(elems.begin(), elems.end(), [](const ParseObject* obj) { return obj == nullptr; }), elems.end());
+			
 			if(!elems.empty())
 			{
 				for(uint32_t i = elems.size() ; i > 0 ; --i)
@@ -157,14 +159,24 @@ static inline action_t getAction(uint32_t stateNumber, Token::class_t tokenClass
 static inline action_t getAction(uint32_t stateNumber, const Token& lookAhead)
 { return getAction(stateNumber, lookAhead.getClass()); }
 
-#define __LOOKAHEAD_STR (lookAhead.getClass() == Token::END_OF_STREAM ? "end-of-stream" : "token \'" + lookAhead.getValue() + "\'")
+#define __LOOKAHEAD_STR			(lookAhead.getClass() == Token::END_OF_STREAM ? "end-of-stream" : "token \'" + lookAhead.getValue() + "\'")
+#define __FIND(_Vec, _Val)		(std::find((_Vec).begin(), (_Vec).end(), (_Val)))
+#define __CONTAINS(_Vec, _Val)	(__FIND(_Vec, _Val) != _Vec.end())
 
 static inline std::string getErrorMessage(uint32_t stateNumber, const Token& lookAhead)
 {
 	std::vector<Token::class_t> validLookAheads;
 	for(Token::class_t tokenClass : Token::CLASSES)
-		if(getAction(stateNumber, tokenClass).type != ERROR)
+		if(tokenClass != Token::ERROR && getAction(stateNumber, tokenClass).type != ERROR)
 			validLookAheads.push_back(tokenClass);
+	
+	if(__CONTAINS(validLookAheads, Token::IDENTIFIER))
+	{
+		if(__CONTAINS(validLookAheads, Token::NO_NAME))
+			validLookAheads.erase(__FIND(validLookAheads, Token::NO_NAME));
+		if(__CONTAINS(validLookAheads, Token::KEYW_OPERATOR))
+			validLookAheads.erase(__FIND(validLookAheads, Token::KEYW_OPERATOR));
+	}
 	
 	switch(validLookAheads.size())
 	{

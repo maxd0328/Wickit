@@ -1,16 +1,14 @@
 % Official Wickit Language Grammar
 
 INCLUDE "symbol/locator.h";
-INCLUDE "ast/general/translation.h";
-INCLUDE "ast/general/declset.h";
-INCLUDE "ast/general/import.h";
+INCLUDE "ast/include.h";
 USING "wckt::ast";
 
 START #TranslationUnit;
 
 % General Rules ----------------------------------------------------------------------------------------------------------------------------------
 
-#TranslationUnit -> #ImportStatement #TranslationUnit;									{ $1P->insertImportStatement($0); return $1; }
+#TranslationUnit -> #ImportStatement #TranslationUnit;									{ $1->insertImportStatement($0); return $1; }
 #TranslationUnit -> #DeclarationSet;													{ return $NEW($0); }
 
 #ImportStatement -> $KEYW_IMPORT #StaticSymbol #ImportSuffix $DELIM_SEMICOLON;			{ return $NEW($1->get(), $2 != $NULL); }
@@ -18,62 +16,79 @@ START #TranslationUnit;
 #ImportSuffix -> $DELIM_DOT $OPERATOR_MUL;												{ return $NEW(); }
 #ImportSuffix -> ;																		{ return $NULL; }
 
-#DeclarationSet -> #DeclarationSet #Declaration;										{ return $NEW(); }
+#DeclarationSet -> #DeclarationSet #Declaration;										{ $0->addDeclaration($1); return $0; }
+#DeclarationSet -> #DeclarationSet $ERROR;												{ return $0; }
 #DeclarationSet -> ;																	{ return $NEW(); }
 
 TYPEOF #ImportSuffix "DummyObject";
 
 % Static Declarations ----------------------------------------------------------------------------------------------------------------------------
 
-#Declaration -> #NamespaceDeclaration;
-#Declaration -> #TypeDeclaration;
+#Declaration -> #NamespaceDeclaration;													{ return $0; }
+#Declaration -> #TypeDeclaration;														{ return $0; }
 
 #NamespaceDeclaration -> $KEYW_NAMESPACE #Identifier $DELIM_LBRACE
-							#DeclarationSet $DELIM_RBRACE;
+							#DeclarationSet $DELIM_RBRACE;								{ return $NEW($1->get(), $3); }
 #NamespaceDeclaration -> $KEYW_NAMESPACE $ERROR $DELIM_LBRACE
-							#DeclarationSet $DELIM_RBRACE;
+							#DeclarationSet $DELIM_RBRACE;								{ return $NEW("?", $3); }
 
-#TypeDeclaration -> $KEYW_TYPE #Identifier #GenericTypeDeclarator
-							$KEYW_AS #Type $DELIM_SEMICOLON;
-#TypeDeclaration -> $KEYW_TYPE $ERROR $DELIM_SEMICOLON;
+#TypeDeclaration -> $KEYW_TYPE #Identifier #OptionalGenericTypeDeclarator
+							$KEYW_AS #Type $DELIM_SEMICOLON;							{ return $NEW($1->get(), $2, $4); }
+#TypeDeclaration -> $KEYW_TYPE $ERROR $DELIM_SEMICOLON;									{ return $NULL; }
 
 % Type Expressions -------------------------------------------------------------------------------------------------------------------------------
 
-#Type -> #TypeUnion;
+#Type -> #TypeUnion;																	{ return $0; }
 
-#TypeUnion -> #TypeIntersection $OPERATOR_OR #TypeUnion;
-#TypeUnion -> #TypeIntersection;
+#TypeUnion -> #TypeIntersection $OPERATOR_OR #TypeUnion;								{ return $NEWOF(UnionExpression, $0, $2); }
+#TypeUnion -> #TypeIntersection;														{ return $0; }
 
-#TypeIntersection -> #FunctionType $OPERATOR_AND #TypeIntersection;
-#TypeIntersection -> #FunctionType;
+#TypeIntersection -> #FunctionType $OPERATOR_AND #TypeIntersection;						{ return $NEWOF(IntersectExpression, $0, $2); }
+#TypeIntersection -> #FunctionType;														{ return $0; }
 
 #FunctionType -> #GenericTypeDeclarator $DELIM_LPAREN #OptionalTypeList
-						$DELIM_RPAREN $OPERATOR_ARROW #ReturnPostfixType;
+						$DELIM_RPAREN $OPERATOR_ARROW #ReturnPostfixType;				{ return $NEWOF(FunctionType, $0, $2->get(), $5); }
 #FunctionType -> $DELIM_LPAREN #OptionalTypeList $DELIM_RPAREN
-						$OPERATOR_ARROW #ReturnPostfixType;
-#FunctionType -> #PostfixType $OPERATOR_ARROW #ReturnPostfixType;
-#FunctionType -> #PostfixType;
+						$OPERATOR_ARROW #ReturnPostfixType;								{ return $NEWOF(FunctionType, $NULL, $1->get(), $4); }
+#FunctionType -> #PostfixType $OPERATOR_ARROW #ReturnPostfixType;						{ std::vector<UPTR(TypeExpression)> vec; vec.push_back($0);
+																						  return $NEWOF(FunctionType, $NULL, vec, $2); }
+#FunctionType -> #PostfixType;															{ return $0; }
 
-#ReturnPostfixType -> #PostfixType;
-#ReturnPostfixType -> $KEYW_VOID;
+#ReturnPostfixType -> #PostfixType;														{ return $0; }
+#ReturnPostfixType -> $KEYW_VOID;														{ return $NULL; }
 
-#PostfixType -> #UnitType $DELIM_LBRACKET $DELIM_RBRACKET;
-#PostfixType -> #UnitType $OPERATOR_OPTIONAL;
-#PostfixType -> #UnitType;
+#PostfixType -> #UnitType $DELIM_LBRACKET $DELIM_RBRACKET;								{ return $NEWOF(ArrayPostfixExpression, $0); }
+#PostfixType -> #UnitType $OPERATOR_OPTIONAL;											{ return $NEWOF(OptionalPostfixExpression, $0); }
+#PostfixType -> #UnitType;																{ return $0; }
 
-#UnitType -> #StaticSymbol #GenericTypeSpecifier;
-#UnitType -> #StaticSymbol;
-#UnitType -> $DELIM_LPAREN #Type $DELIM_RPAREN;
-#UnitType -> $DELIM_LPAREN $ERROR $DELIM_RPAREN;
+#UnitType -> #StaticSymbol #GenericTypeSpecifier;										{ return $NEWOF(TypeReference, $0->get(), $1); }
+#UnitType -> #StaticSymbol;																{ return $NEWOF(TypeReference, $0->get(), $NULL); }
+#UnitType -> $DELIM_LPAREN #Type $DELIM_RPAREN;											{ return $1; }
+#UnitType -> $DELIM_LPAREN $ERROR $DELIM_RPAREN;										{ return $NEWOF(ErrorType); }
 
-#GenericTypeDeclarator -> $OPERATOR_LESS #GenericTypeDeclaratorImpl $OPERATOR_GREATER;
-#GenericTypeDeclaratorImpl -> #GenericType $DELIM_COMMA #GenericTypeDeclaratorImpl;
-#GenericTypeDeclaratorImpl -> #GenericType;
+#GenericTypeDeclarator -> $OPERATOR_LESS #GenericTypeDeclaratorImpl $OPERATOR_GREATER;	{ return $1; }
+#GenericTypeDeclaratorImpl -> #GenericType $DELIM_COMMA #GenericTypeDeclaratorImpl;		{ $2->insertType($0); return $2; }
+#GenericTypeDeclaratorImpl -> #GenericType;												{ return $NEW($0); }
+#OptionalGenericTypeDeclarator -> #GenericTypeDeclarator;								{ return $0; }
+#OptionalGenericTypeDeclarator -> ;														{ return $NULL; }
 
-#GenericType -> #Identifier;
-#GenericType -> #Identifier $KEYW_SATISFIES #Type;
+#GenericType -> #Identifier;															{ return $NEW($0->get(), $NULL); }
+#GenericType -> #Identifier $KEYW_SATISFIES #Type;										{ return $NEW($0->get(), $2); }
 
-#GenericTypeSpecifier -> $OPERATOR_LESS #OptionalTypeList $OPERATOR_GREATER;
+#GenericTypeSpecifier -> $OPERATOR_LESS #OptionalTypeList $OPERATOR_GREATER;			{ return $NEW($1->get()); }
+#OptionalGenericTypeSpecifier -> #GenericTypeSpecifier;									{ return $0; }
+#OptionalGenericTypeSpecifier -> ;														{ return $NULL; }
+
+TYPEOF #Type "TypeExpression";
+TYPEOF #TypeUnion "TypeExpression";
+TYPEOF #TypeIntersection "TypeExpression";
+TYPEOF #FunctionType "TypeExpression";
+TYPEOF #ReturnPostfixType "TypeExpression";
+TYPEOF #PostfixType "TypeExpression";
+TYPEOF #UnitType "TypeExpression";
+TYPEOF #GenericTypeDeclaratorImpl "GenericTypeDeclarator";
+TYPEOF #OptionalGenericTypeDeclarator "GenericTypeDeclarator";
+TYPEOF #OptionalGenericTypeSpecifier "GenericTypeSpecifier";
 
 % Miscellanious Rules ----------------------------------------------------------------------------------------------------------------------------
 
@@ -83,11 +98,14 @@ TYPEOF #ImportSuffix "DummyObject";
 #Identifier -> $IDENTIFIER;																{ return $NEW($0->get().getValue()); }
 #Identifier -> $NO_NAME;																{ return $NEW("---"); }
 
-#TypeList -> #Type $DELIM_COMMA #TypeList;
+#TypeList -> #Type $DELIM_COMMA #TypeList;												{ $2->get().insert($2->get().begin(), $0); return $2; }
 PRECEDENCE LOW
-#TypeList -> #Type;
-#OptionalTypeList -> #TypeList;
-#OptionalTypeList -> ;
+#TypeList -> #Type;																		{ std::vector<UPTR(TypeExpression)> vec;
+																						  vec.push_back($0); return $NEW(std::move(vec)); }
+#OptionalTypeList -> #TypeList;															{ return $0; }
+#OptionalTypeList -> ;																	{ return $NEW(std::vector<UPTR(TypeExpression)>()); }
 
 TYPEOF #StaticSymbol "ContainerObject<sym::Locator>";
 TYPEOF #Identifier "ContainerObject<std::string>";
+TYPEOF #TypeList "ContainerObject<std::vector<UPTR(TypeExpression)>>";
+TYPEOF #OptionalTypeList "ContainerObject<std::vector<UPTR(TypeExpression)>>";

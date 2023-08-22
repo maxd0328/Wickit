@@ -64,7 +64,7 @@ public class StateGenerator {
 				// If the transition symbol is END_OF_STREAM, we don't create a new state and leave it as null instead
 				// This will eventually translate to an 'Accept' action
 				if(symbol.isTerminal() && symbol.getValue().equals("END_OF_STREAM")) {
-					state.addTransitionState(symbol, null, transitionItemSet);
+					state.addTransitionState(symbol, null);
 					continue;
 				}
 				
@@ -81,7 +81,7 @@ public class StateGenerator {
 				else newState = states.get(newState);
 				
 				// Make sure each state can track all of its transitions
-				state.addTransitionState(symbol, newState, transitionItemSet);
+				state.addTransitionState(symbol, newState);
 			}
 		}
 		
@@ -96,17 +96,21 @@ public class StateGenerator {
 			
 			// Transition the lookaheads from every state to every one of its transitions
 			for(State state : states) {
-				for(Map.Entry<Symbol, State.Transition> entry : state.getTransitions().entrySet()) {
+				for(Map.Entry<Symbol, State> entry : state.getTransitions().entrySet()) {
 					Symbol symbol = entry.getKey();
-					State.Transition transition = entry.getValue();
+					State transitionState = entry.getValue();
+					
+					if(transitionState == null)
+						continue;
 					
 					// Get the items which map to the transition items
 					Map<Item, Item> sourceItems = new HashMap<>();
 					state.getSymbolMapping().get(symbol).forEach(sourceItem -> sourceItems.put(sourceItem.getTransitionItem(), sourceItem));
 					
 					// Do transition lookahead propagation from source items to their corresponding transition items
-					for(Item item : transition.getTransitionedItems())
-						changed |= item.unionLookAheads(sourceItems.get(item).getLookAheads());
+					for(Item item : transitionState.getItems())
+						if(sourceItems.containsKey(item))
+							changed |= item.unionLookAheads(sourceItems.get(item).getLookAheads());
 				}
 			}
 			

@@ -18,6 +18,7 @@ namespace wckt::ast
 			bool isWildcard() const;
 			
 			std::string toString() const override;
-			std::vector<ParseObject*> getElements() const override;
+			std::vector<const ParseObject*> getElements() const override;
+			std::vector<ParseObject*> getElements() override;
 	};
 }

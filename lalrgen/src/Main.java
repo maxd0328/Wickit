@@ -137,7 +137,7 @@ public class Main {
 		
 		if(arguments.isShowStatesEnabled()) {
 			for(State state : stateGenerator.toOrderedList(states)) {
-				info(state.toString());
+				info(state.toString(arguments.isShowLookAheadsEnabled()));
 				info("");
 			}
 		}

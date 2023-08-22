@@ -181,9 +181,9 @@ public class SourceWriter {
 		String semanticAction = production.getSemanticAction();
 		if(semanticAction == null)
 			return null;
-		semanticAction = semanticAction.replaceAll("\\$([0-9]+)P", "PXELEM($1)");
-		semanticAction = semanticAction.replaceAll("\\$([0-9]+)", "PXELEM_MOVE($1)");
+		semanticAction = semanticAction.replaceAll("\\$([0-9]+)", "PXELEM($1)");
 		semanticAction = semanticAction.replaceAll("\\$NULL", "PNULL");
+		semanticAction = semanticAction.replaceAll("\\$NEWOF", "PMAKE_UNIQUE_OF");
 		semanticAction = semanticAction.replaceAll("\\$NEW", "PMAKE_UNIQUE(" + grammar.getActionType(production.getNonTerminal()) + ")");
 		return semanticAction;
 	}

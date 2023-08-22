@@ -15,7 +15,7 @@ public class State {
 	private final int stateNumber;
 	private final Set<Item> items;
 	
-	private Map<Symbol, Transition> transitions;
+	private Map<Symbol, State> transitions;
 	private Map<Symbol, Set<Item>> symbolMapCache;
 	private Set<Item> reductionCache;
 	
@@ -38,18 +38,18 @@ public class State {
 		return Collections.unmodifiableSet(items);
 	}
 	
-	public Map<Symbol, Transition> getTransitions() {
+	public Map<Symbol, State> getTransitions() {
 		return Collections.unmodifiableMap(transitions);
 	}
 	
-	public Transition getTransitionState(Symbol symbol) {
+	public State getTransitionState(Symbol symbol) {
 		assert transitions.containsKey(symbol);
 		return transitions.get(symbol);
 	}
 	
-	public void addTransitionState(Symbol symbol, State state, Set<Item> transitionedItems) {
+	public void addTransitionState(Symbol symbol, State state) {
 		assert !transitions.containsKey(symbol);
-		this.transitions.put(symbol, new Transition(state, transitionedItems));
+		this.transitions.put(symbol, state);
 	}
 	
 	// Merges look aheads from target state into this state
@@ -191,29 +191,6 @@ public class State {
 	@Override
 	public int hashCode() {
 		return Objects.hash(items);
-	}
-	
-	public static class Transition {
-		
-		private final State target;
-		private Set<Item> transitionedItems;
-		
-		public Transition(State target, Set<Item> transitionedItems) {
-			assert target != null && transitionedItems != null;
-			assert transitionedItems.size() > 0;
-			this.target = target;
-			this.transitionedItems = new HashSet<>();
-			this.transitionedItems.addAll(transitionedItems);
-		}
-		
-		public State getTarget() {
-			return target;
-		}
-		
-		public Set<Item> getTransitionedItems() {
-			return Collections.unmodifiableSet(transitionedItems);
-		}
-		
 	}
 	
 }

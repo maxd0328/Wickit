@@ -2,7 +2,7 @@
 
 #include "buildw/parser.h"
 #include "ast/general/import.h"
-#include "ast/general/declset.h"
+#include "ast/general/declaration.h"
 
 namespace wckt::build
 {
@@ -16,12 +16,13 @@ namespace wckt::build
             TranslationUnit(UPTR(ast::DeclarationSet)&& declarations);
 			
 			const std::vector<UPTR(ast::ImportStatement)>& getImportStatements() const;
-			const ast::DeclarationSet& getDeclarations() const;
+			ast::DeclarationSet& getDeclarations() const;
 			
 			void insertImportStatement(UPTR(ast::ImportStatement)&& statement);
 			
 			std::string toString() const override;
-			std::vector<ParseObject*> getElements() const override;
+			std::vector<const ParseObject*> getElements() const override;
+			std::vector<ParseObject*> getElements() override;
     };
 }
 

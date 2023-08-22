@@ -16,6 +16,7 @@ public class CommandArguments {
 		"   -v      --verbose     Enable verbose terminal output",
 		"   -s      --show-table  Display parse table in terminal",
 		"   --show-states         Display information about each state",
+		"   --with-lookaheads     Display look-aheads alongside states",
 		"   --no-auto             Disable auto-conflict resolution",
 		"   --version             Display version information"
 	};
@@ -32,6 +33,7 @@ public class CommandArguments {
 	private final boolean noAutoResolution;
 	private final boolean showTable;
 	private final boolean showStates;
+	private final boolean showLookAheads;
 
 	public CommandArguments(String[] args) {
 		Queue<String> queue = new LinkedList<>(Arrays.asList(args));
@@ -42,7 +44,8 @@ public class CommandArguments {
 		boolean verbose = false,
 			noAutoResolution = false,
 			showTable = false,
-			showStates = false;
+			showStates = false,
+			showLookAheads = false;
 		
 		while(!queue.isEmpty()) {
 			String arg = queue.poll();
@@ -76,6 +79,10 @@ public class CommandArguments {
 				case "--show-states":
 					showStates = true;
 					break;
+				case "--with-lookaheads":
+					assertThat(showStates, "Must show states in order to display look-aheads");
+					showLookAheads = true;
+					break;
 				default:
 					assertThat(inputFile == null, "Multiple input files specified");
 					inputFile = arg;
@@ -95,6 +102,7 @@ public class CommandArguments {
 		this.noAutoResolution = noAutoResolution;
 		this.showTable = showTable;
 		this.showStates = showStates;
+		this.showLookAheads = showLookAheads;
 	}
 
 	public Mode getMode() {
@@ -123,6 +131,10 @@ public class CommandArguments {
 
 	public boolean isShowStatesEnabled() {
 		return showStates;
+	}
+	
+	public boolean isShowLookAheadsEnabled() {
+		return showLookAheads;
 	}
 
 	public void doModeOperation(Informer informer) {
