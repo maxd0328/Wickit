@@ -26,6 +26,7 @@ TYPEOF #ImportSuffix "DummyObject";
 
 #Declaration -> #NamespaceDeclaration;													{ return $0; }
 #Declaration -> #TypeDeclaration;														{ return $0; }
+#Declaration -> #PropertyDeclaration													{ return $0; }
 
 #NamespaceDeclaration -> $KEYW_NAMESPACE #Identifier $DELIM_LBRACE
 							#DeclarationSet $DELIM_RBRACE;								{ return $NEW($1->get(), $3); }
@@ -35,6 +36,8 @@ TYPEOF #ImportSuffix "DummyObject";
 #TypeDeclaration -> $KEYW_TYPE #Identifier #OptionalGenericTypeDeclarator
 							$KEYW_AS #Type $DELIM_SEMICOLON;							{ return $NEW($1->get(), $2, $4); }
 #TypeDeclaration -> $KEYW_TYPE $ERROR $DELIM_SEMICOLON;									{ return $NULL; }
+
+#PropertyDeclaration -> #Declarator $DELIM_SEMICOLON;
 
 % Type Expressions -------------------------------------------------------------------------------------------------------------------------------
 
@@ -53,9 +56,6 @@ TYPEOF #ImportSuffix "DummyObject";
 #FunctionType -> #PostfixType $OPERATOR_ARROW #ReturnPostfixType;						{ std::vector<UPTR(TypeExpression)> vec; vec.push_back($0);
 																						  return $NEWOF(FunctionType, $NULL, vec, $2); }
 #FunctionType -> #PostfixType;															{ return $0; }
-
-#ReturnPostfixType -> #PostfixType;														{ return $0; }
-#ReturnPostfixType -> $KEYW_VOID;														{ return $NULL; }
 
 #PostfixType -> #UnitType $DELIM_LBRACKET $DELIM_RBRACKET;								{ return $NEWOF(ArrayPostfixExpression, $0); }
 #PostfixType -> #UnitType $OPERATOR_OPTIONAL;											{ return $NEWOF(OptionalPostfixExpression, $0); }
@@ -79,16 +79,22 @@ TYPEOF #ImportSuffix "DummyObject";
 #OptionalGenericTypeSpecifier -> #GenericTypeSpecifier;									{ return $0; }
 #OptionalGenericTypeSpecifier -> ;														{ return $NULL; }
 
+#ReturnType -> #Type;																	{ return $0; }
+#ReturnType -> $KEYW_VOID;																{ return $NULL; }
+#ReturnPostfixType -> #PostfixType;														{ return $0; }
+#ReturnPostfixType -> $KEYW_VOID;														{ return $NULL; }
+
 TYPEOF #Type "TypeExpression";
 TYPEOF #TypeUnion "TypeExpression";
 TYPEOF #TypeIntersection "TypeExpression";
 TYPEOF #FunctionType "TypeExpression";
-TYPEOF #ReturnPostfixType "TypeExpression";
 TYPEOF #PostfixType "TypeExpression";
 TYPEOF #UnitType "TypeExpression";
 TYPEOF #GenericTypeDeclaratorImpl "GenericTypeDeclarator";
 TYPEOF #OptionalGenericTypeDeclarator "GenericTypeDeclarator";
 TYPEOF #OptionalGenericTypeSpecifier "GenericTypeSpecifier";
+TYPEOF #PostfixType "TypeExpression";
+TYPEOF #ReturnPostfixType "TypeExpression";
 
 % Expressions ------------------------------------------------------------------------------------------------------------------------------------
 
@@ -156,7 +162,8 @@ TYPEOF #OptionalGenericTypeSpecifier "GenericTypeSpecifier";
 #Expression14 -> #Expression15;
 
 #Expression15 -> #Expression15 $DELIM_DOT #Identifier;
-#Expression15 -> #Expression15 $DELIM_LPAREN #OptionalExpressionList $DELIM_RPAREN;
+#Expression15 -> #Expression15 #OptionalGenericTypeSpecifier $DELIM_LPAREN
+					#OptionalExpressionList $DELIM_RPAREN;
 #Expression15 -> #Expression15 $DELIM_LBRACKET #OptionalExpressionList $DELIM_RBRACKET;
 #Expression15 -> #Expression16;
 
@@ -172,12 +179,29 @@ TYPEOF #OptionalGenericTypeSpecifier "GenericTypeSpecifier";
 #Expression16 -> $DELIM_LBRACE #ObjectDeclarationSet $DELIM_RBRACE;
 #Expression16 -> #ConstructorInvocation;
 #Expression16 -> #AnonymousFunction;
+#Expression16 -> #ArrowFunction;
 
-#ConstructorInvocation -> $KEYW_NEW #StaticSymbol $DELIM_LPAREN
-							#OptionalExpressionList $DELIM_RPAREN;
-#ConstructorInvocation -> $KEYW_NEW #StaticSymbol;
+#ObjectDeclarationSet -> #ObjectDeclarationSet #ObjectDeclaration;
+#ObjectDeclarationSet -> ;
+#ObjectDeclaration -> #Initializer $DELIM_SEMICOLON;
 
-#AnonymousFunction -> ...
+#ConstructorInvocation -> $KEYW_NEW #StaticSymbol #OptionalGenericTypeSpecifier
+							$DELIM_LPAREN #OptionalExpressionList $DELIM_RPAREN;
+#ConstructorInvocation -> $KEYW_NEW #StaticSymbol #OptionalGenericTypeSpecifier;
+
+#AnonymousFunction -> $KEYW_FUNCTION #Identifier #OptionalGenericTypeDeclarator
+						$DELIM_LPAREN #OptionalParameterList $DELIM_RPAREN
+						#AnonymousFunctionReturn $DELIM_LBRACE $DELIM_RBRACE;
+#AnonymousFunctionReturn -> $DELIM_COLON #ReturnType;
+#AnonymousFunctionReturn -> ;
+
+#ArrowFunction -> #OptionalGenericTypeDeclarator $DELIM_LPAREN #OptionalParameterList
+					$DELIM_RPAREN #ArrowFunctionReturn #ArrowFunctionRest;
+#ArrowFunction -> #Identifier #ArrowFunctionRest;
+#ArrowFunctionReturn -> $DELIM_COLON #ReturnPostfixType;
+#ArrowFunctionReturn -> ;
+#ArrowFunctionRest -> $OPERATOR_ARROW #Expression;
+#ArrowFunctionRest -> $OPERATOR_ARROW $DELIM_LBRACE $DELIM_RBRACE;
 
 % Miscellanious Rules ----------------------------------------------------------------------------------------------------------------------------
 
@@ -198,6 +222,19 @@ PRECEDENCE LOW
 #ExpressionList -> #Expression;
 #OptionalExpressionList -> #ExpressionList;
 #OptionalExpressionList -> ;
+
+#Parameter -> #Identifier $DELIM_COLON #Type;
+#Parameter -> #Identifier;
+#Declarator -> #Identifier $DELIM_COLON #Type $OPERATOR_ASSIGN #Expression;
+#Declarator -> #Identifier $DELIM_COLON #Type;
+#Declarator -> #Identifier $OPERATOR_ASSIGN #Expression;
+#Initializer -> #Identifier $DELIM_COLON #Type $OPERATOR_ASSIGN #Expression;
+#Initializer -> #Identifier $OPERATOR_ASSIGN #Expression;
+
+#ParameterList -> #Parameter $DELIM_COMMA #ParameterList;
+#ParameterList -> #Parameter;
+#OptionalParameterList -> #ParameterList;
+#OptionalParameterList -> ;
 
 TYPEOF #StaticSymbol "ContainerObject<sym::Locator>";
 TYPEOF #Identifier "ContainerObject<std::string>";
