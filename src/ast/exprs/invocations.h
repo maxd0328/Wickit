@@ -42,4 +42,24 @@ namespace wckt::ast
 			std::vector<const ParseObject*> getElements() const override;
 			std::vector<ParseObject*> getElements() override;
 	};
+
+	class ConstructorInvocation : public Expression
+	{
+		private:
+			sym::Locator locator;
+			UPTR(GenericTypeSpecifier) genericSpecifier;
+			std::vector<UPTR(Expression)> parameters;
+
+		public:
+			ConstructorInvocation(const sym::Locator& locator, UPTR(GenericTypeSpecifier)&& specifier, std::vector<UPTR(Expression)>& parameters);
+			ConstructorInvocation(const sym::Locator& locator, UPTR(GenericTypeSpecifier)&& specifier, std::vector<UPTR(Expression)>&& parameters);
+
+			sym::Locator getLocator() const;
+			GenericTypeSpecifier* getGenericSpecifier() const;
+			const std::vector<UPTR(Expression)>& getParameters() const;
+
+			std::string toString() const override;
+			std::vector<const ParseObject*> getElements() const override;
+			std::vector<ParseObject*> getElements() override;
+	};
 }

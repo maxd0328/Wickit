@@ -10,23 +10,24 @@ namespace wckt::ast
 		public:
 			enum operator_t
 			{
-				ADD, SUB, MUL, DIV,
-				MOD, AND, OR, XOR,
-				SHL, SHR, EQU, NEQ,
-				GRT, LST, GTE, LTE
+				ADD, SUB, MUL, DIV, MOD, AND,
+				OR, XOR, SHL, SHR, EQU, NEQ,
+				GRT, LST, GTE, LTE, SEQ, SNE
 			};
 			
 		private:
 			UPTR(Expression) left;
 			UPTR(Expression) right;
+			std::string opStr;
 			operator_t op;
 			
 		public:
-			BinaryOperatorExpression(UPTR(Expression)&& left, UPTR(Expression)&& right, operator_t op);
+			BinaryOperatorExpression(UPTR(Expression)&& left, UPTR(Expression)&& right, const build::Token& token);
 			
 			Expression& getLeft() const;
 			Expression& getRight() const;
-			operator_t getOp();
+			std::string getOpStr() const;
+			operator_t getOp() const;
 			
 			std::string toString() const override;
 			std::vector<const ParseObject*> getElements() const override;
@@ -45,13 +46,15 @@ namespace wckt::ast
 			
 		private:
 			UPTR(Expression) operand;
+			std::string opStr;
 			operator_t op;
 		
 		public:
-			UnaryOperatorExpression(UPTR(Expression)&& operand, operator_t op);
+			UnaryOperatorExpression(UPTR(Expression)&& operand, const build::Token& token, bool post);
 			
-			Expression& getOperand();
-			operator_t getOp();
+			Expression& getOperand() const;
+			std::string getOpStr() const;
+			operator_t getOp() const;
 			
 			std::string toString() const override;
 			std::vector<const ParseObject*> getElements() const override;
@@ -72,14 +75,16 @@ namespace wckt::ast
 		private:
 			UPTR(Expression) left;
 			UPTR(Expression) right;
+			std::string opStr;
 			operator_t op;
 			
 		public:
-			AssignmentExpression(UPTR(Expression)&& left, UPTR(Expression)&& right, operator_t op);
+			AssignmentExpression(UPTR(Expression)&& left, UPTR(Expression)&& right, const build::Token& token);
 			
 			Expression& getLeft() const;
 			Expression& getRight() const;
-			operator_t getOp();
+			std::string getOpStr() const;
+			operator_t getOp() const;
 			
 			std::string toString() const override;
 			std::vector<const ParseObject*> getElements() const override;

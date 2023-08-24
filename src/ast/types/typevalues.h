@@ -53,4 +53,12 @@ namespace wckt::ast
 			std::vector<const ParseObject*> getElements() const override;
 			std::vector<ParseObject*> getElements() override;
 	};
+
+	class ImplicitType : public TypeExpression
+	{
+		public:
+			std::string toString() const override;
+			std::vector<const ParseObject*> getElements() const override;
+			std::vector<ParseObject*> getElements() override;
+	};
 }

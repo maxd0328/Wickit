@@ -66,3 +66,11 @@ std::vector<const ParseObject*> ErrorType::getElements() const
 { return {}; }
 std::vector<ParseObject*> ErrorType::getElements()
 { return {}; }
+
+std::string ImplicitType::toString() const
+{ return "ImplicitType"; }
+
+std::vector<const ParseObject*> ImplicitType::getElements() const
+{ return {}; }
+std::vector<ParseObject*> ImplicitType::getElements()
+{ return {}; }

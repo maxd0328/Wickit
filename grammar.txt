@@ -168,6 +168,7 @@ TYPEOF #ReturnPostfixType "TypeExpression";
 #Expression15 -> #Expression16;
 
 #Expression16 -> $DELIM_LPAREN #Expression $DELIM_RPAREN;
+#Expression16 -> $DELIM_LPAREN $ERROR $DELIM_RPAREN;
 #Expression16 -> $KEYW_THIS;
 #Expression16 -> $INT_LITERAL;
 #Expression16 -> $FLOAT_LITERAL;

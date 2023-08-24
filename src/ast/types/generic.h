@@ -31,7 +31,8 @@ namespace wckt::ast
 			GenericTypeDeclarator(UPTR(GenericType)&& type);
 			
 			const std::vector<GenericType>& getTypes() const;
-			
+			std::vector<GenericType>& getTypes();
+
 			void insertType(UPTR(GenericType)&& type);
 			
 			std::string toString() const override;

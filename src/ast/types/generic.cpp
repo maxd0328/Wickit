@@ -26,6 +26,8 @@ GenericTypeDeclarator::GenericTypeDeclarator(UPTR(GenericType)&& type)
 
 const std::vector<GenericType>& GenericTypeDeclarator::getTypes() const
 { return this->types; }
+std::vector<GenericType>& GenericTypeDeclarator::getTypes()
+{ return this->types; }
 
 void GenericTypeDeclarator::insertType(UPTR(GenericType)&& type)
 {
